@@ -277,10 +277,10 @@ class GibbsKernel1d(Kernel):
             # There are two unimportant parameters at the start of the l_func
             # fingerprint, then we have to add one for sigma_f.
             try:
-                num_params = len(inspect.getargspec(l_func)[0]) - 2 + 1
+                num_params = len(inspect.getfullargspec(l_func)[0]) - 2 + 1
             except TypeError:
                 # Need to remove self from the arg list for bound method:
-                num_params = len(inspect.getargspec(l_func.__call__)[0]) - 3 + 1
+                num_params = len(inspect.getfullargspec(l_func.__call__)[0]) - 3 + 1
 
         super(GibbsKernel1d, self).__init__(
             num_dim=1, num_params=num_params, **kwargs

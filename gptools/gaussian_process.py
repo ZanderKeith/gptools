@@ -1778,17 +1778,23 @@ class GaussianProcess(object):
                 )
         else:
             sampler.a = sampler_a
-        if sampler.chain.size == 0:
+        # Check if sampler has been run before
+        try:
+            chain = sampler.get_chain()
+            if chain.size == 0:
+                theta0 = self.hyperprior.random_draw(size=nwalkers).T
+                theta0 = theta0[:, ~self.fixed_params]
+            else:
+                # Start from the stopping point of the previous chain:
+                theta0 = chain[:, -1, :]
+        except (AttributeError, ValueError):
+            # Sampler hasn't been run yet or doesn't support get_chain
             theta0 = self.hyperprior.random_draw(size=nwalkers).T
             theta0 = theta0[:, ~self.fixed_params]
-        else:
-            # Start from the stopping point of the previous chain:
-            theta0 = sampler.chain[:, -1, :]
         
         sampler.run_mcmc(theta0, nsamp)
         if plot_posterior or plot_chains:
-            flat_trace = sampler.chain[:, burn::thin, :]
-            flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+            flat_trace = sampler.get_chain(discard=burn, thin=thin, flat=True)
         
         if plot_posterior and plot_chains:
             plot_sampler(
@@ -1816,7 +1822,8 @@ class GaussianProcess(object):
                     # a.set_xlabel('lag')
                     # a.set_title('${:s}$ autocorrelation'.format(self.free_param_names[k]))
                     a = f.add_subplot(ndim, 1, 0 * ndim + k + 1)
-                    for chain in sampler.chain[:, :, k]:
+                    chain_data = sampler.get_chain()
+                    for chain in chain_data[:, :, k]:
                         a.plot(chain)
                     a.set_xlabel('sample')
                     a.set_ylabel('${:s}$'.format(self.free_param_names[k]))
@@ -1935,8 +1942,7 @@ class GaussianProcess(object):
                     # This will occur if only one thread is used.
                     pass
                 
-            flat_trace = sampler.chain[:, burn::thin, :]
-            flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+            flat_trace = sampler.get_chain(discard=burn, thin=thin, flat=True)
         else:
             flat_trace = flat_trace[burn::thin, :]
         
@@ -2047,8 +2053,7 @@ class GaussianProcess(object):
                     # This will occur if only one thread is used.
                     pass
                 
-            flat_trace = sampler.chain[:, burn::thin, :]
-            flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+            flat_trace = sampler.get_chain(discard=burn, thin=thin, flat=True)
         else:
             flat_trace = flat_trace[burn::thin, :]
         
@@ -2124,8 +2129,7 @@ class GaussianProcess(object):
                     # This will occur if only one thread is used.
                     pass
                 
-            flat_trace = sampler.chain[:, burn::thin, :]
-            flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+            flat_trace = sampler.get_chain(discard=burn, thin=thin, flat=True)
         else:
             flat_trace = flat_trace[burn::thin, :]
         
@@ -2215,7 +2219,7 @@ class GaussianProcess(object):
             # TODO: Allow use of robust estimators!
             if 'cov' in res:
                 covs = np.asarray(res['cov'])
-                cov = np.mean(covs, axis=0) + scipy.cov(means, rowvar=0, ddof=ddof)
+                cov = np.mean(covs, axis=0) + np.cov(means, rowvar=0, ddof=ddof)
                 std = np.sqrt(np.diagonal(cov))
             elif 'std' in res:
                 vars_ = np.asarray(np.asarray(res['std']))**2

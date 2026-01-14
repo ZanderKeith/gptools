@@ -1861,7 +1861,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
                 a_QQ.set_xlabel('quantiles of $\mathcal{N}(0,1)$')
                 a_QQ.set_ylabel('quantiles of data')
                 
-                a_hist.hist(vals[idx, ~nan_idxs], bins=bins, normed=True)
+                a_hist.hist(vals[idx, ~nan_idxs], bins=bins, density=True)
                 locs = np.linspace(vals[idx, ~nan_idxs].min(), vals[idx, ~nan_idxs].max())
                 a_hist.plot(locs, scipy.stats.norm.pdf(locs, loc=mean[idx], scale=std[idx]))
                 a_hist.set_title('Normalized histogram and reported PDF')
@@ -2013,7 +2013,7 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
     cibdry = 100.0 * (1.0 - ci) / 2.0
     if weights is None:
         mean = np.mean(flat_trace, axis=0)
-        ci_l, ci_u = scipy.percentile(flat_trace, [cibdry, 100.0 - cibdry], axis=0)
+        ci_l, ci_u = np.percentile(flat_trace, [cibdry, 100.0 - cibdry], axis=0)
     else:
         mean = weights.dot(flat_trace) / weights.sum()
         ci_l = np.zeros(k)
@@ -2306,7 +2306,7 @@ def plot_sampler(
     for i in range(0, k):
         axes[i, i].clear()
         if plot_hist:
-            axes[i, i].hist(flat_trace[:, i], bins=bins, color=hist_color, weights=masked_weights, normed=True, histtype='stepfilled')
+            axes[i, i].hist(flat_trace[:, i], bins=bins, color=hist_color, weights=masked_weights, density=True, histtype='stepfilled')
         if plot_samples:
             axes[i, i].plot(flat_trace[:, i], np.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
         if points is not None:
@@ -2422,7 +2422,6 @@ def plot_sampler(
             plt.setp(axes[-1, i].xaxis.get_majorticklabels(), rotation=xticklabel_angle)
             for tick in axes[-1, i].get_yaxis().get_major_ticks():
                 tick.set_pad(chain_ytick_pad)
-                tick.label1 = tick._get_text1()
     
     for i in range(0, k):
         if max_hist_ticks is not None:
