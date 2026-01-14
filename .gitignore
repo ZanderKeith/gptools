@@ -53,3 +53,5 @@ docs/_build/
 target/
 
 gptools/kernel/_matern.c
+
+.vscode
