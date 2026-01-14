@@ -25,6 +25,7 @@ from __future__ import division
 from .core import Kernel
 
 import scipy
+import numpy as np
 import scipy.special
 
 
@@ -108,26 +109,26 @@ class SquaredExponentialKernel(Kernel):
             Covariances for each of the `M` `Xi`, `Xj` pairs.
         """
         only_first_order = (
-            (scipy.asarray(ni, dtype=scipy.intc) == 0).all() and
-            (scipy.asarray(nj, dtype=scipy.intc) == 0).all()
+            (np.asarray(ni, dtype=np.intc) == 0).all() and
+            (np.asarray(nj, dtype=np.intc) == 0).all()
         )
-        tau = scipy.asarray(Xi - Xj, dtype=scipy.double)
+        tau = np.asarray(Xi - Xj, dtype=np.float64)
         r2l2, l_mat = self._compute_r2l2(tau, return_l=True)
-        k = self.params[0] ** 2 * scipy.exp(-r2l2 / 2.0)
+        k = self.params[0] ** 2 * np.exp(-r2l2 / 2.0)
         if not only_first_order:
             # Account for derivatives:
             # Get total number of differentiations:
-            n_tot_j = scipy.asarray(
-                scipy.sum(nj, axis=1), dtype=scipy.intc
+            n_tot_j = np.asarray(
+                np.sum(nj, axis=1), dtype=np.intc
             ).flatten()
-            n_combined = scipy.asarray(ni + nj, dtype=scipy.intc)
+            n_combined = np.asarray(ni + nj, dtype=np.intc)
             # Compute factor from the dtau_d/dx_d_j terms in the chain rule:
             j_chain_factors = (-1.0) ** (n_tot_j)
             # Compute Hermite polynomial factor:
             hermite_factors = (
-                (-1.0 / (scipy.sqrt(2.0) * l_mat)) ** (n_combined) *
+                (-1.0 / (np.sqrt(2.0) * l_mat)) ** (n_combined) *
                 scipy.special.eval_hermite(
-                    n_combined, tau / (scipy.sqrt(2.0) * l_mat)
+                    n_combined, tau / (np.sqrt(2.0) * l_mat)
                 )
             )
             # Handle length scale hyperparameter derivatives:
@@ -139,31 +140,31 @@ class SquaredExponentialKernel(Kernel):
                     self.params[hyper_deriv]
                 mask = mask & (tau[:, hyper_deriv - 1] != 0.0)
                 t[mask] -= (
-                    scipy.sqrt(2.0) * n_combined[mask, hyper_deriv - 1] *
+                    np.sqrt(2.0) * n_combined[mask, hyper_deriv - 1] *
                     tau[mask, hyper_deriv - 1] /
                     (self.params[hyper_deriv]) ** 2.0 *
                     scipy.special.eval_hermite(
                         n_combined[mask, hyper_deriv - 1] - 1,
                         tau[mask, hyper_deriv - 1] / (
-                            scipy.sqrt(2.0) * self.params[hyper_deriv]
+                            np.sqrt(2.0) * self.params[hyper_deriv]
                         )
                     ) /
                     scipy.special.eval_hermite(
                         n_combined[mask, hyper_deriv - 1],
                         tau[mask, hyper_deriv - 1] / (
-                            scipy.sqrt(2.0) * self.params[hyper_deriv]
+                            np.sqrt(2.0) * self.params[hyper_deriv]
                         )
                     )
                 )
                 hermite_factors[:, hyper_deriv - 1] *= t
 
-            k = j_chain_factors * scipy.prod(hermite_factors, axis=1) * k
+            k = j_chain_factors * np.prod(hermite_factors, axis=1) * k
         # Take care of hyperparameter derivatives:
         if hyper_deriv is None:
             return k
         elif hyper_deriv == 0:
             return 2.0 * k / self.params[0] if self.params[0] != 0.0 \
-                else scipy.zeros_like(k)
+                else np.zeros_like(k)
         else:
             # Keep efficient form for only_first_order:
             if only_first_order:

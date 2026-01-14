@@ -28,6 +28,7 @@ import scipy
 import scipy.linalg
 import scipy.optimize
 import scipy.stats
+import numpy as np
 import numpy.random
 import numpy.linalg
 import sys
@@ -217,9 +218,9 @@ class GaussianProcess(object):
         self.verbose = verbose
         
         # Set the placeholder shapes:
-        self.y = scipy.array([], dtype=float)
+        self.y = np.array([], dtype=float)
         self.X = None
-        self.err_y = scipy.array([], dtype=float)
+        self.err_y = np.array([], dtype=float)
         self.n = None
         self.T = None
         
@@ -268,7 +269,7 @@ class GaussianProcess(object):
     
     @fixed_params.setter
     def fixed_params(self, value):
-        value = scipy.asarray(value, dtype=bool)
+        value = np.asarray(value, dtype=bool)
         self.k.fixed_params = value[:self.k.num_params]
         self.noise_k.fixed_params = value[self.k.num_params:self.k.num_params + self.noise_k.num_params]
         if self.mu is not None:
@@ -285,7 +286,7 @@ class GaussianProcess(object):
     
     @params.setter
     def params(self, value):
-        value = scipy.asarray(value, dtype=float)
+        value = np.asarray(value, dtype=float)
         self.K_up_to_date = False
         self.k.params = value[:self.k.num_params]
         self.noise_k.params = value[self.k.num_params:self.k.num_params + self.noise_k.num_params]
@@ -331,7 +332,7 @@ class GaussianProcess(object):
     def free_params(self, value):
         """Set the free parameters. Note that this bypasses enforce_bounds.
         """
-        value = scipy.asarray(value, dtype=float)
+        value = np.asarray(value, dtype=float)
         self.K_up_to_date = False
         self.k.free_params = value[:self.k.num_free_params]
         self.noise_k.free_params = value[self.k.num_free_params:self.k.num_free_params + self.noise_k.num_free_params]
@@ -349,7 +350,7 @@ class GaussianProcess(object):
     
     @free_param_bounds.setter
     def free_param_bounds(self, value):
-        value = scipy.asarray(value, dtype=float)
+        value = np.asarray(value, dtype=float)
         self.k.free_param_bounds = value[:self.k.num_free_params]
         self.noise_k.free_param_bounds = value[self.k.num_free_params:self.k.num_free_params + self.noise_k.num_free_params]
         if self.mu is not None:
@@ -366,7 +367,7 @@ class GaussianProcess(object):
     
     @free_param_names.setter
     def free_param_names(self, value):
-        value = scipy.asarray(value, dtype=str)
+        value = np.asarray(value, dtype=str)
         self.K_up_to_date = False
         self.k.free_param_names = value[:self.k.num_free_params]
         self.noise_k.free_param_names = value[self.k.num_free_params:self.k.num_free_params + self.noise_k.num_free_params]
@@ -410,7 +411,7 @@ class GaussianProcess(object):
             Bad shapes for any of the inputs, negative values for `err_y` or `n`.
         """
         # Verify y has only one non-trivial dimension:
-        y = scipy.atleast_1d(scipy.asarray(y, dtype=float))
+        y = np.atleast_1d(np.asarray(y, dtype=float))
         if len(y.shape) != 1:
             raise ValueError(
                 "Training targets y must have only one dimension with length "
@@ -421,9 +422,9 @@ class GaussianProcess(object):
         try:
             iter(err_y)
         except TypeError:
-            err_y = err_y * scipy.ones_like(y, dtype=float)
+            err_y = err_y * np.ones_like(y, dtype=float)
         else:
-            err_y = scipy.asarray(err_y, dtype=float)
+            err_y = np.asarray(err_y, dtype=float)
             if err_y.shape != y.shape:
                 raise ValueError(
                     "When using array-like err_y, shape must match shape of "
@@ -434,7 +435,7 @@ class GaussianProcess(object):
             raise ValueError("All elements of err_y must be non-negative!")
         
         # Handle scalar training input or convert array input into 2d.
-        X = scipy.atleast_2d(scipy.asarray(X, dtype=float))
+        X = np.atleast_2d(np.asarray(X, dtype=float))
         # Correct single-dimension inputs:
         if self.num_dim == 1 and X.shape[0] == 1:
             X = X.T
@@ -450,9 +451,9 @@ class GaussianProcess(object):
         try:
             iter(n)
         except TypeError:
-            n = n * scipy.ones_like(X, dtype=int)
+            n = n * np.ones_like(X, dtype=int)
         else:
-            n = scipy.atleast_2d(scipy.asarray(n, dtype=int))
+            n = np.atleast_2d(np.asarray(n, dtype=int))
             # Correct single-dimension inputs:
             if self.num_dim == 1 and n.shape[1] != 1:
                 n = n.T
@@ -469,9 +470,9 @@ class GaussianProcess(object):
         
         # Handle transform:
         if T is None and self.T is not None:
-            T = scipy.eye(len(y))
+            T = np.eye(len(y))
         if T is not None:
-            T = scipy.atleast_2d(scipy.asarray(T, dtype=float))
+            T = np.atleast_2d(np.asarray(T, dtype=float))
             if T.ndim != 2:
                 raise ValueError("T must have exactly 2 dimensions!")
             if T.shape[0] != len(y):
@@ -483,7 +484,7 @@ class GaussianProcess(object):
                     "There must be as many columns in T as there are rows in X!"
                 )
             if self.T is None and self.X is not None:
-                self.T = scipy.eye(len(self.y))
+                self.T = np.eye(len(self.y))
             
             if self.T is None:
                 self.T = T
@@ -493,13 +494,13 @@ class GaussianProcess(object):
         if self.X is None:
             self.X = X
         else:
-            self.X = scipy.vstack((self.X, X))
-        self.y = scipy.append(self.y, y)
-        self.err_y = scipy.append(self.err_y, err_y)
+            self.X = np.vstack((self.X, X))
+        self.y = np.append(self.y, y)
+        self.err_y = np.append(self.err_y, err_y)
         if self.n is None:
             self.n = n
         else:
-            self.n = scipy.vstack((self.n, n))
+            self.n = np.vstack((self.n, n))
         self.K_up_to_date = False
     
     def condense_duplicates(self):
@@ -518,14 +519,14 @@ class GaussianProcess(object):
         zero (even if all of the rows of [X, n] are unique).
         """
         unique, inv = unique_rows(
-            scipy.hstack((self.X, self.n)),
+            np.hstack((self.X, self.n)),
             return_inverse=True
         )
         # Only proceed if there is anything to be gained:
         if len(unique) != len(self.X):
             if self.T is None:
-                self.T = scipy.eye(len(self.y))
-            new_T = scipy.zeros((len(self.y), unique.shape[0]))
+                self.T = np.eye(len(self.y))
+            new_T = np.zeros((len(self.y), unique.shape[0]))
             for j in range(0, len(inv)):
                 new_T[:, inv[j]] += self.T[:, j]
             self.T = new_T
@@ -583,7 +584,7 @@ class GaussianProcess(object):
             self.X, n=self.n, noise=False, return_std=False,
             output_transform=self.T, **predict_kwargs
         )
-        deltas = scipy.absolute(mean - self.y) / self.err_y
+        deltas = np.absolute(mean - self.y) / self.err_y
         deltas[self.err_y == 0] = 0
         bad_idxs = (deltas >= thresh)
         good_idxs = ~bad_idxs
@@ -686,12 +687,12 @@ class GaussianProcess(object):
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
         
-        param_ranges = scipy.asarray(self.free_param_bounds, dtype=float)
+        param_ranges = np.asarray(self.free_param_bounds, dtype=float)
         # Replace unbounded variables with something big:
-        param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
-        param_ranges[scipy.where(scipy.isnan(param_ranges[:, 1])), 1] = 1e16
-        param_ranges[scipy.where(scipy.isinf(param_ranges[:, 0])), 0] = -1e16
-        param_ranges[scipy.where(scipy.isinf(param_ranges[:, 1])), 1] = 1e16
+        param_ranges[np.where(np.isnan(param_ranges[:, 0])), 0] = -1e16
+        param_ranges[np.where(np.isnan(param_ranges[:, 1])), 1] = 1e16
+        param_ranges[np.where(np.isinf(param_ranges[:, 0])), 0] = -1e16
+        param_ranges[np.where(np.isinf(param_ranges[:, 1])), 1] = 1e16
         if random_starts == 0:
             num_proc = 0
             param_samples = [self.free_params[:]]
@@ -738,7 +739,7 @@ class GaussianProcess(object):
             
             try:
                 res_min = min(res, key=lambda r: r.fun)
-                if scipy.isnan(res_min.fun) or scipy.isinf(res_min.fun):
+                if np.isnan(res_min.fun) or np.isinf(res_min.fun):
                     res_min = None
             except ValueError:
                 res_min = None
@@ -769,7 +770,7 @@ class GaussianProcess(object):
                 ),
                 RuntimeWarning
             )
-        bounds = scipy.asarray(self.free_param_bounds)
+        bounds = np.asarray(self.free_param_bounds)
         # Augment the bounds a little bit to catch things that are one step away:
         if ((res_min.x <= 1.001 * bounds[:, 0]).any() or
             (res_min.x >= 0.999 * bounds[:, 1]).any()):
@@ -912,7 +913,7 @@ class GaussianProcess(object):
                 return res['mean']
         else:
             # Process Xstar:
-            Xstar = scipy.atleast_2d(scipy.asarray(Xstar, dtype=float))
+            Xstar = np.atleast_2d(np.asarray(Xstar, dtype=float))
             # Handle 1d x case where array is passed in:
             if self.num_dim == 1 and Xstar.shape[0] == 1:
                 Xstar = Xstar.T
@@ -926,7 +927,7 @@ class GaussianProcess(object):
             
             # Process T:
             if output_transform is not None:
-                output_transform = scipy.atleast_2d(scipy.asarray(output_transform, dtype=float))
+                output_transform = np.atleast_2d(np.asarray(output_transform, dtype=float))
                 if output_transform.ndim != 2:
                     raise ValueError(
                         "output_transform must have exactly 2 dimensions! "
@@ -948,9 +949,9 @@ class GaussianProcess(object):
             try:
                 iter(n)
             except TypeError:
-                n = n * scipy.ones(Xstar.shape, dtype=int)
+                n = n * np.ones(Xstar.shape, dtype=int)
             else:
-                n = scipy.atleast_2d(scipy.asarray(n, dtype=int))
+                n = np.atleast_2d(np.asarray(n, dtype=int))
                 if self.num_dim == 1 and n.shape[0] == 1:
                     n = n.T
                 if n.shape != Xstar.shape:
@@ -970,7 +971,7 @@ class GaussianProcess(object):
                 Kstar = self.T.dot(Kstar)
             mean = Kstar.T.dot(self.alpha)
             if self.mu is not None:
-                mean_func = scipy.atleast_2d(self.mu(Xstar, n)).T
+                mean_func = np.atleast_2d(self.mu(Xstar, n)).T
                 mean += mean_func
             if output_transform is not None:
                 mean = output_transform.dot(mean)
@@ -999,11 +1000,11 @@ class GaussianProcess(object):
                                 good_samps.append(samp)
                         if len(good_samps) == 0:
                             raise ValueError("Did not get any good samples!")
-                        samps = scipy.asarray(good_samps, dtype=float).T
+                        samps = np.asarray(good_samps, dtype=float).T
                     if full_MC:
-                        mean = scipy.mean(samps, axis=1)
+                        mean = np.mean(samps, axis=1)
                         covariance = scipy.cov(samps, rowvar=1, ddof=ddof)
-                std = scipy.sqrt(scipy.diagonal(covariance))
+                std = np.sqrt(np.diagonal(covariance))
                 if full_output:
                     out = {
                         'mean': mean,
@@ -1014,11 +1015,11 @@ class GaussianProcess(object):
                         out['samp'] = samps
                     if return_mean_func and self.mu is not None:
                         out['mean_func'] = mean_func
-                        out['cov_func'] = scipy.zeros(
+                        out['cov_func'] = np.zeros(
                             (len(mean_func), len(mean_func)),
                             dtype=float
                         )
-                        out['std_func'] = scipy.zeros_like(mean_func)
+                        out['std_func'] = np.zeros_like(mean_func)
                         out['mean_without_func'] = mean - mean_func
                         out['cov_without_func'] = covariance
                         out['std_without_func'] = std
@@ -1097,18 +1098,18 @@ class GaussianProcess(object):
         
         if self.num_dim == 1:
             if X is None:
-                X = scipy.linspace(self.X.min(), self.X.max(), 100)
+                X = np.linspace(self.X.min(), self.X.max(), 100)
         elif self.num_dim == 2:
             if X is None:
-                x1 = scipy.linspace(self.X[:, 0].min(), self.X[:, 0].max(), 50)
-                x2 = scipy.linspace(self.X[:, 1].min(), self.X[:, 1].max(), 50)
-                X1, X2 = scipy.meshgrid(x1, x2)
+                x1 = np.linspace(self.X[:, 0].min(), self.X[:, 0].max(), 50)
+                x2 = np.linspace(self.X[:, 1].min(), self.X[:, 1].max(), 50)
+                X1, X2 = np.meshgrid(x1, x2)
                 X1 = X1.flatten()
                 X2 = X2.flatten()
-                X = scipy.hstack((scipy.atleast_2d(X1).T, scipy.atleast_2d(X2).T))
+                X = np.hstack((np.atleast_2d(X1).T, np.atleast_2d(X2).T))
             else:
-                X1 = scipy.asarray(X[:, 0]).flatten()
-                X2 = scipy.asarray(X[:, 1]).flatten()
+                X1 = np.asarray(X[:, 0]).flatten()
+                X2 = np.asarray(X[:, 1]).flatten()
         
         if envelopes or (return_prediction and (return_std or full_output)):
             out = self.predict(X, n=n, full_output=True, **kwargs)
@@ -1294,7 +1295,7 @@ class GaussianProcess(object):
         
         if method == 'cholesky':
             L = scipy.linalg.cholesky(
-                cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
+                cov + diag_factor * sys.float_info.epsilon * np.eye(cov.shape[0]),
                 lower=True,
                 check_finite=False
             )
@@ -1302,7 +1303,7 @@ class GaussianProcess(object):
             # TODO: Add support for specifying cutoff eigenvalue!
             # Not technically lower triangular, but we'll keep the name L:
             eig, Q = scipy.linalg.eigh(
-                cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
+                cov + diag_factor * sys.float_info.epsilon * np.eye(cov.shape[0]),
                 eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1)
             )
             if modify_sign is not None:
@@ -1323,11 +1324,11 @@ class GaussianProcess(object):
                         "modify_sign {:s} not recognized!".format(modify_sign)
                     )
                 Q[:, modify_mask] *= -1.0
-            Lam_1_2 = scipy.diag(scipy.sqrt(eig))
+            Lam_1_2 = np.diag(np.sqrt(eig))
             L = Q.dot(Lam_1_2)
         else:
             raise ValueError("method {:s} not recognized!".format(method))
-        return scipy.atleast_2d(mean).T + L.dot(rand_vars[:num_eig, :])
+        return np.atleast_2d(mean).T + L.dot(rand_vars[:num_eig, :])
     
     def update_hyperparameters(self, new_params, hyper_deriv_handling='default', exit_on_bounds=True, inf_on_error=True):
         r"""Update the kernel's hyperparameters to the new parameters.
@@ -1356,7 +1357,7 @@ class GaussianProcess(object):
             internal state. This is useful during MCMC sampling and optimization.
             Default is True (don't perform update for impossible hyperparameters).
         inf_on_error : bool, optional
-            If True, the method will return `scipy.inf` if the hyperparameters
+            If True, the method will return `np.inf` if the hyperparameters
             produce a linear algebra error upon trying to update the Gaussian
             process. Default is True (catch errors and return infinity).
         
@@ -1385,7 +1386,7 @@ class GaussianProcess(object):
         self.K_up_to_date = False
         try:
             if exit_on_bounds:
-                if scipy.isinf(self.hyperprior(self.params)):
+                if np.isinf(self.hyperprior(self.params)):
                     raise GPImpossibleParamsError("Impossible values for params!")
             self.compute_K_L_alpha_ll()
         except Exception as e:
@@ -1399,11 +1400,11 @@ class GaussianProcess(object):
                     )
                 self.use_hyper_deriv = use_hyper_deriv
                 if use_hyper_deriv and hyper_deriv_handling == 'default':
-                    return (scipy.inf, scipy.zeros(len(self.free_params)))
+                    return (np.inf, np.zeros(len(self.free_params)))
                 elif hyper_deriv_handling == 'deriv':
-                    return scipy.zeros(len(self.free_params))
+                    return np.zeros(len(self.free_params))
                 else:
-                    return scipy.inf
+                    return np.inf
             else:
                 self.use_hyper_deriv = use_hyper_deriv
                 raise e
@@ -1432,9 +1433,9 @@ class GaussianProcess(object):
             # If the noise kernel is meant to be strictly diagonal, it should
             # yield a diagonal noise_K:
             if isinstance(self.noise_k, ZeroKernel):
-                self.noise_K = scipy.zeros((self.X.shape[0], self.X.shape[0]))
+                self.noise_K = np.zeros((self.X.shape[0], self.X.shape[0]))
             elif isinstance(self.noise_k, DiagonalNoiseKernel):
-                self.noise_K = self.noise_k.params[0]**2.0 * scipy.eye(self.X.shape[0])
+                self.noise_K = self.noise_k.params[0]**2.0 * np.eye(self.X.shape[0])
             else:
                 self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
             
@@ -1446,8 +1447,8 @@ class GaussianProcess(object):
                 KnK = K + noise_K
             K_tot = (
                 KnK +
-                scipy.diag(err_y**2.0) +
-                self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y))
+                np.diag(err_y**2.0) +
+                self.diag_factor * sys.float_info.epsilon * np.eye(len(y))
             )
             self.L = scipy.linalg.cholesky(K_tot, lower=True)
             # Need to make the mean-subtracted y that appears in the expression
@@ -1459,11 +1460,11 @@ class GaussianProcess(object):
                 y_alph = self.y - mu_alph
             else:
                 y_alph = self.y
-            self.alpha = scipy.linalg.cho_solve((self.L, True), scipy.atleast_2d(y_alph).T)
+            self.alpha = scipy.linalg.cho_solve((self.L, True), np.atleast_2d(y_alph).T)
             self.ll = (
-                -0.5 * scipy.atleast_2d(y_alph).dot(self.alpha) -
-                scipy.log(scipy.diag(self.L)).sum() - 
-                0.5 * len(y) * scipy.log(2.0 * scipy.pi)
+                -0.5 * np.atleast_2d(y_alph).dot(self.alpha) -
+                np.log(np.diag(self.L)).sum() - 
+                0.5 * len(y) * np.log(2.0 * np.pi)
             )[0, 0]
             # Apply hyperpriors:
             self.ll += self.hyperprior(self.params)
@@ -1473,7 +1474,7 @@ class GaussianProcess(object):
                 
                 # Only compute for the free parameters, since that is what we
                 # want to optimize:
-                self.ll_deriv = scipy.zeros(len(self.free_params))
+                self.ll_deriv = np.zeros(len(self.free_params))
                 # Combine the kernel and noise kernel so we only need one loop:
                 if isinstance(self.noise_k, ZeroKernel):
                     knk = self.k
@@ -1481,16 +1482,16 @@ class GaussianProcess(object):
                     knk = self.k
                     # Handle DiagonalNoiseKernel specially:
                     if not self.noise_k.fixed_params[0]:
-                        dK_dtheta_i = 2.0 * self.noise_k.params[0] * scipy.eye(len(y))
+                        dK_dtheta_i = 2.0 * self.noise_k.params[0] * np.eye(len(y))
                         self.ll_deriv[len(self.k.free_params)] = 0.5 * (
                             self.alpha.T.dot(dK_dtheta_i.dot(self.alpha)) -
-                            scipy.trace(scipy.linalg.cho_solve((self.L, True), dK_dtheta_i))
+                            np.trace(scipy.linalg.cho_solve((self.L, True), dK_dtheta_i))
                         )
                 else:
                     knk = self.k + self.noise_k
                 
                 # Get the indices of the free params in knk.params:
-                free_param_idxs = scipy.arange(0, len(knk.params), dtype=int)[~knk.fixed_params]
+                free_param_idxs = np.arange(0, len(knk.params), dtype=int)[~knk.fixed_params]
                 # Handle the kernel and noise kernel:
                 for i, pi in enumerate(free_param_idxs):
                     dK_dtheta_i = self.compute_Kij(
@@ -1500,22 +1501,22 @@ class GaussianProcess(object):
                         dK_dtheta_i = self.T.dot(dK_dtheta_i).dot(self.T.T)
                     self.ll_deriv[i] = 0.5 * (
                         self.alpha.T.dot(dK_dtheta_i.dot(self.alpha)) -
-                        scipy.trace(scipy.linalg.cho_solve((self.L, True), dK_dtheta_i))
+                        np.trace(scipy.linalg.cho_solve((self.L, True), dK_dtheta_i))
                     )
                 
                 # Handle the mean function:
                 if self.mu is not None:
                     # Get the indices of the free params in self.mu.params:
-                    free_param_idxs = scipy.arange(0, len(self.mu.params), dtype=int)[~self.mu.fixed_params]
+                    free_param_idxs = np.arange(0, len(self.mu.params), dtype=int)[~self.mu.fixed_params]
                     for i, pi in enumerate(free_param_idxs):
-                        dmu_dtheta_i = scipy.atleast_2d(self.mu(self.X, self.n, hyper_deriv=pi)).T
+                        dmu_dtheta_i = np.atleast_2d(self.mu(self.X, self.n, hyper_deriv=pi)).T
                         if self.T is not None:
                             dmu_dtheta_i = self.T.dot(dmu_dtheta_i)
                         self.ll_deriv[i + len(knk.free_params)] = dmu_dtheta_i.T.dot(self.alpha)
                 
                 # Handle the hyperprior:
                 # Get the indices of the free params in self.params:
-                free_param_idxs = scipy.arange(0, len(self.params), dtype=int)[~self.fixed_params]
+                free_param_idxs = np.arange(0, len(self.params), dtype=int)[~self.fixed_params]
                 for i, pi in enumerate(free_param_idxs):
                     self.ll_deriv[i] += self.hyperprior(self.params, hyper_deriv=pi)
             
@@ -1588,10 +1589,10 @@ class GaussianProcess(object):
         # Might be worth trying to do that at some point, but this is vastly
         # superior to the double for loop implementation for which using
         # symmetry is easy.
-        Xi_tile = scipy.repeat(Xi, Xj.shape[0], axis=0)
-        ni_tile = scipy.repeat(ni, Xj.shape[0], axis=0)
-        Xj_tile = scipy.tile(Xj, (Xi.shape[0], 1))
-        nj_tile = scipy.tile(nj, (Xi.shape[0], 1))
+        Xi_tile = np.repeat(Xi, Xj.shape[0], axis=0)
+        ni_tile = np.repeat(ni, Xj.shape[0], axis=0)
+        Xj_tile = np.tile(Xj, (Xi.shape[0], 1))
+        nj_tile = np.tile(nj, (Xi.shape[0], 1))
         Kij = k(
             Xi_tile,
             Xj_tile,
@@ -1600,7 +1601,7 @@ class GaussianProcess(object):
             hyper_deriv=hyper_deriv,
             symmetric=symmetric
         )
-        Kij = scipy.reshape(Kij, (Xi.shape[0], -1))
+        Kij = np.reshape(Kij, (Xi.shape[0], -1))
         
         return Kij
     
@@ -1623,19 +1624,19 @@ class GaussianProcess(object):
                 The parameter values used.
         """
         present_free_params = self.free_params[:]
-        bounds = scipy.atleast_2d(scipy.asarray(bounds, dtype=float))
+        bounds = np.atleast_2d(np.asarray(bounds, dtype=float))
         if bounds.shape[1] != 2:
             raise ValueError("Argument bounds must have shape (n, 2)!")
         # If bounds is a single tuple, repeat it for each free parameter:
         if bounds.shape[0] == 1:
-            bounds = scipy.tile(bounds, (len(present_free_params), 1))
+            bounds = np.tile(bounds, (len(present_free_params), 1))
         # If num_pts is a single value, use it for all of the parameters:
         try:
             iter(num_pts)
         except TypeError:
-            num_pts = num_pts * scipy.ones(bounds.shape[0], dtype=int)
+            num_pts = num_pts * np.ones(bounds.shape[0], dtype=int)
         else:
-            num_pts = scipy.asarray(num_pts, dtype=int)
+            num_pts = np.asarray(num_pts, dtype=int)
             if len(num_pts) != len(present_free_params):
                 raise ValueError(
                     "Length of num_pts must match the number of free parameters!"
@@ -1644,11 +1645,11 @@ class GaussianProcess(object):
         # Form arrays to evaluate parameters over:
         param_vals = []
         for k in range(0, len(present_free_params)):
-            param_vals.append(scipy.linspace(bounds[k, 0], bounds[k, 1], num_pts[k]))
+            param_vals.append(np.linspace(bounds[k, 0], bounds[k, 1], num_pts[k]))
         ll_vals = self._compute_ll_matrix(0, param_vals, num_pts)
         
         # Reset the parameters to what they were before:
-        self.update_hyperparameters(scipy.asarray(present_free_params, dtype=float))
+        self.update_hyperparameters(np.asarray(present_free_params, dtype=float))
         
         return (ll_vals, param_vals)
     
@@ -1676,11 +1677,11 @@ class GaussianProcess(object):
         if idx >= len(num_pts):
             # Base case: All entries in param_vals should be scalars:
             return -1.0 * self.update_hyperparameters(
-                scipy.asarray(param_vals, dtype=float)
+                np.asarray(param_vals, dtype=float)
             )
         else:
             # Recursive case: call _compute_ll_matrix for each entry in param_vals[idx]:
-            vals = scipy.zeros(num_pts[idx:], dtype=float)
+            vals = np.zeros(num_pts[idx:], dtype=float)
             for k in range(0, len(param_vals[idx])):
                 specific_param_vals = list(param_vals)
                 specific_param_vals[idx] = param_vals[idx][k]
@@ -2193,7 +2194,7 @@ class GaussianProcess(object):
         out = {}
         
         if return_samples:
-            samps = scipy.asarray(scipy.hstack(res['samp']))
+            samps = np.asarray(np.hstack(res['samp']))
         
         if full_MC:
             if rejection_func:
@@ -2203,38 +2204,38 @@ class GaussianProcess(object):
                         good_samps.append(samp)
                 if len(good_samps) == 0:
                     raise ValueError("Did not get any good samples!")
-                samps = scipy.asarray(good_samps, dtype=float).T
-            mean = scipy.mean(samps, axis=1)
+                samps = np.asarray(good_samps, dtype=float).T
+            mean = np.mean(samps, axis=1)
             cov = scipy.cov(samps, rowvar=1, ddof=ddof)
-            std = scipy.sqrt(scipy.diagonal(cov))
+            std = np.sqrt(np.diagonal(cov))
         else:
-            means = scipy.asarray(res['mean'])
-            mean = scipy.mean(means, axis=0)
+            means = np.asarray(res['mean'])
+            mean = np.mean(means, axis=0)
             
             # TODO: Allow use of robust estimators!
             if 'cov' in res:
-                covs = scipy.asarray(res['cov'])
-                cov = scipy.mean(covs, axis=0) + scipy.cov(means, rowvar=0, ddof=ddof)
-                std = scipy.sqrt(scipy.diagonal(cov))
+                covs = np.asarray(res['cov'])
+                cov = np.mean(covs, axis=0) + scipy.cov(means, rowvar=0, ddof=ddof)
+                std = np.sqrt(np.diagonal(cov))
             elif 'std' in res:
-                vars_ = scipy.asarray(scipy.asarray(res['std']))**2
-                std = scipy.sqrt(scipy.mean(vars_, axis=0) +
-                                 scipy.var(means, axis=0, ddof=ddof))
+                vars_ = np.asarray(np.asarray(res['std']))**2
+                std = np.sqrt(np.mean(vars_, axis=0) +
+                                 np.var(means, axis=0, ddof=ddof))
             if 'mean_func' in res:
-                mean_funcs = scipy.asarray(res['mean_func'])
-                cov_funcs = scipy.asarray(res['cov_func'])
-                mean_func = scipy.mean(mean_funcs, axis=0)
-                cov_func = scipy.mean(cov_funcs, axis=0) + scipy.cov(mean_funcs, rowvar=0, ddof=ddof)
-                std_func = scipy.sqrt(scipy.diagonal(cov_func))
+                mean_funcs = np.asarray(res['mean_func'])
+                cov_funcs = np.asarray(res['cov_func'])
+                mean_func = np.mean(mean_funcs, axis=0)
+                cov_func = np.mean(cov_funcs, axis=0) + scipy.cov(mean_funcs, rowvar=0, ddof=ddof)
+                std_func = np.sqrt(np.diagonal(cov_func))
                 
-                mean_without_funcs = scipy.asarray(res['mean_without_func'])
-                cov_without_funcs = scipy.asarray(res['cov_without_func'])
-                mean_without_func = scipy.mean(mean_without_funcs, axis=0)
+                mean_without_funcs = np.asarray(res['mean_without_func'])
+                cov_without_funcs = np.asarray(res['cov_without_func'])
+                mean_without_func = np.mean(mean_without_funcs, axis=0)
                 cov_without_func = (
-                    scipy.mean(cov_without_funcs, axis=0) +
+                    np.mean(cov_without_funcs, axis=0) +
                     scipy.cov(mean_without_funcs, rowvar=0, ddof=ddof)
                 )
-                std_without_func = scipy.sqrt(scipy.diagonal(cov_without_func))
+                std_without_func = np.sqrt(np.diagonal(cov_without_func))
                 
                 out['mean_func'] = mean_func
                 out['cov_func'] = cov_func
@@ -2361,8 +2362,8 @@ class _ComputeLWrapper(object):
         """Evaluate the covariance length scale function with free hyperparameters `p_case`.
         """
         try:
-            p_case = scipy.asarray(p_case)
-            p = scipy.copy(scipy.asarray(self.gp.k.params, dtype=float))
+            p_case = np.asarray(p_case)
+            p = scipy.copy(np.asarray(self.gp.k.params, dtype=float))
             p[~self.gp.k.fixed_params] = p_case[:len(self.gp.k.free_params)]
             out = self.gp.k.l_func(self.X, self.n, *p[1:])
         except Exception as e:
@@ -2402,8 +2403,8 @@ class _ComputeWWrapper(object):
         beta-CDF warp is wrapped in a linear warp).
         """
         try:
-            p_case = scipy.asarray(p_case)
-            p = scipy.copy(scipy.asarray(self.gp.k.params, dtype=float))
+            p_case = np.asarray(p_case)
+            p = scipy.copy(np.asarray(self.gp.k.params, dtype=float))
             p[~self.gp.k.fixed_params] = p_case[:len(self.gp.k.free_params)]
             self.gp.k.params = p
             is_nested = hasattr(self.gp.k.k, 'w')
@@ -2563,12 +2564,12 @@ class Constraint(object):
                 iter(loc)
             except TypeError:
                 if self.gp.num_dim == 1:
-                    self.loc = scipy.asarray([loc], dtype=float)
+                    self.loc = np.asarray([loc], dtype=float)
                 else:
                     raise ValueError("Argument loc must be 'min', 'max' or an "
                                      "array of length {:d}".format(self.gp.num_dim))
             else:
-                loc = scipy.asarray(loc, dtype=float)
+                loc = np.asarray(loc, dtype=float)
                 if loc.shape == (self.gp.num_dim,):
                     self.loc = loc
                 else:
@@ -2581,8 +2582,8 @@ class Constraint(object):
             raise ValueError("Argument type_ must be 'gt' or 'lt'.")
         
         if bounds is None:
-            bounds = (scipy.asarray(self.gp.X.min(axis=0), dtype=float).flatten(),
-                      scipy.asarray(self.gp.X.max(axis=0), dtype=float).flatten())
+            bounds = (np.asarray(self.gp.X.min(axis=0), dtype=float).flatten(),
+                      np.asarray(self.gp.X.max(axis=0), dtype=float).flatten())
         else:
             bounds = list(bounds)
             if len(bounds) != 2:
@@ -2592,12 +2593,12 @@ class Constraint(object):
                     iter(bounds[k])
                 except TypeError:
                     if self.gp.num_dim == 1:
-                        bounds[k] = scipy.asarray([bounds[k]], dtype=float)
+                        bounds[k] = np.asarray([bounds[k]], dtype=float)
                     else:
                         raise ValueError("Each element in argument bounds must "
                                          "have length {:d}".format(self.gp.num_dim))
                 else:
-                    bounds[k] = scipy.asarray(bounds[k], dtype=float)
+                    bounds[k] = np.asarray(bounds[k], dtype=float)
                     if bounds[k].shape != (self.gp.num_dim,):
                         raise ValueError("Each element in argument bounds must "
                                          "have length {:d}".format(self.gp.num_dim))
@@ -2630,14 +2631,14 @@ class Constraint(object):
             try:
                 res = scipy.optimize.minimize(
                     lambda X: factor * self.gp.predict(X, n=self.n, return_cov=False)[0, 0],
-                    scipy.mean(self.bounds, axis=1),
+                    np.mean(self.bounds, axis=1),
                     method='SLSQP',
                     bounds=self.bounds
                 )
             except AttributeError:
                 res = wrap_fmin_slsqp(
                     lambda X: factor * self.gp.predict(X, n=self.n, return_cov=False)[0, 0],
-                    scipy.mean(self.bounds, axis=1),
+                    np.mean(self.bounds, axis=1),
                     opt_kwargs={'bounds': self.bounds, 'iprint': 0}
                 )
                 

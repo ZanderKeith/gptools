@@ -58,6 +58,7 @@ from ..splines import spev
 
 import inspect
 import scipy
+import numpy as np
 import scipy.special
 
 class WarpingFunction(object):
@@ -154,7 +155,7 @@ class WarpingFunction(object):
             param_names = [''] * self.num_params
         elif len(param_names) != self.num_params:
             raise ValueError("param_names must be a list of length num_params!")
-        self.param_names = scipy.asarray(param_names, dtype=str)
+        self.param_names = np.asarray(param_names, dtype=str)
         
         if num_dim < 1 or not isinstance(num_dim, (int, long)):
             raise ValueError("num_dim must be an integer > 0!")
@@ -169,14 +170,14 @@ class WarpingFunction(object):
                 raise ValueError(
                     "Must pass explicit parameter values if fixing parameters!"
                 )
-            initial_params = scipy.ones(self.num_params, dtype=float)
-            fixed_params = scipy.zeros(self.num_params, dtype=float)
+            initial_params = np.ones(self.num_params, dtype=float)
+            fixed_params = np.zeros(self.num_params, dtype=float)
         else:
             if len(initial_params) != self.num_params:
                 raise ValueError("Length of initial_params must be equal to num_params!")
             # Handle default case of fixed_params: no fixed parameters.
             if fixed_params is None:
-                fixed_params = scipy.zeros(self.num_params, dtype=float)
+                fixed_params = np.zeros(self.num_params, dtype=float)
             else:
                 if len(fixed_params) != self.num_params:
                     raise ValueError("Length of fixed_params must be equal to num_params!")
@@ -203,8 +204,8 @@ class WarpingFunction(object):
             except TypeError:
                 pass
         
-        self.params = scipy.asarray(initial_params, dtype=float)
-        self.fixed_params = scipy.asarray(fixed_params, dtype=bool)
+        self.params = np.asarray(initial_params, dtype=float)
+        self.fixed_params = np.asarray(fixed_params, dtype=bool)
         self.hyperprior = hyperprior
     
     def __call__(self, X, d, n):
@@ -238,7 +239,7 @@ class WarpingFunction(object):
             New parameter values, ordered as dictated by the docstring for the
             class.
         """
-        new_params = scipy.asarray(new_params, dtype=float)
+        new_params = np.asarray(new_params, dtype=float)
         
         if len(new_params) == len(self.free_params):
             if self.enforce_bounds:
@@ -261,7 +262,7 @@ class WarpingFunction(object):
     def free_param_idxs(self):
         """Returns the indices of the free parameters in the main arrays of parameters, etc.
         """
-        return scipy.arange(0, self.num_params)[~self.fixed_params]
+        return np.arange(0, self.num_params)[~self.fixed_params]
     
     @property
     def free_params(self):
@@ -276,7 +277,7 @@ class WarpingFunction(object):
     
     @free_params.setter
     def free_params(self, value):
-        self.params[self.free_param_idxs] = scipy.asarray(value, dtype=float)
+        self.params[self.free_param_idxs] = np.asarray(value, dtype=float)
     
     @property
     def free_param_bounds(self):
@@ -309,7 +310,7 @@ class WarpingFunction(object):
     @free_param_names.setter
     def free_param_names(self, value):
         # Cast to array in case it hasn't been done already:
-        self.param_names = scipy.asarray(self.param_names, dtype=str)
+        self.param_names = np.asarray(self.param_names, dtype=str)
         self.param_names[~self.fixed_params] = value
 
 def beta_cdf_warp(X, d, n, *args):
@@ -343,7 +344,7 @@ def beta_cdf_warp(X, d, n, *args):
     .. [1] J. Snoek, K. Swersky, R. Zemel, R. P. Adams, "Input Warping for
        Bayesian Optimization of Non-stationary Functions" ICML (2014)
     """
-    X = scipy.asarray(X)
+    X = np.asarray(X)
     
     a = args[2 * d]
     b = args[2 * d + 1]
@@ -355,7 +356,7 @@ def beta_cdf_warp(X, d, n, *args):
         return (1 - X)**(b - 1) * X**(a - 1) / scipy.special.beta(a, b)
     else:
         # http://functions.wolfram.com/GammaBetaErf/BetaRegularized/20/02/01/
-        out = scipy.zeros_like(X)
+        out = np.zeros_like(X)
         for k in range(0, n):
             out += (
                 (-1.0)**(n - k) * scipy.special.binom(n - 1, k) *
@@ -389,7 +390,7 @@ def linear_warp(X, d, n, *args):
         These are given as `a_i`, `b_i` for each of the `D` dimensions. Note
         that these must ALL be provided for each call.
     """
-    X = scipy.asarray(X, dtype=float)
+    X = np.asarray(X, dtype=float)
     
     a = args[2 * d]
     b = args[2 * d + 1]
@@ -397,9 +398,9 @@ def linear_warp(X, d, n, *args):
     if n == 0:
         return (X - a) / (b - a)
     elif n == 1:
-        return 1.0 / (b - a) * scipy.ones_like(X)
+        return 1.0 / (b - a) * np.ones_like(X)
     else:
-        return scipy.zeros_like(X)
+        return np.zeros_like(X)
 
 class ISplineWarp(object):
     """Warps inputs with an I-spline.
@@ -445,12 +446,12 @@ class ISplineWarp(object):
             These are given as the knots followed by the coefficients, for each
             dimension. Note that these must ALL be provided for each call.
         """
-        X = scipy.asarray(X, dtype=float)
-        args = scipy.asarray(args, dtype=float)
+        X = np.asarray(X, dtype=float)
+        args = np.asarray(args, dtype=float)
         try:
             iter(self.nt)
         except TypeError:
-            nt = self.nt * scipy.ones(d + 1)
+            nt = self.nt * np.ones(d + 1)
         else:
             nt = self.nt
         i = 0
@@ -458,7 +459,7 @@ class ISplineWarp(object):
             i += 2 * nt[j] + self.k - 2
         t = args[i:i + nt[d]]
         # No DC offset for the mapping, always map the origin to 0:
-        C = scipy.concatenate(([0.0,], args[i + nt[d]:i + 2 * nt[d] + self.k - 2]))
+        C = np.concatenate(([0.0,], args[i + nt[d]:i + 2 * nt[d] + self.k - 2]))
         return spev(t, C, self.k, X, n=n, I_spline=True)
 
 class WarpedKernel(Kernel):
@@ -481,8 +482,8 @@ class WarpedKernel(Kernel):
         super(WarpedKernel, self).__init__(
             num_dim=k.num_dim,
             num_params=k.num_params + w.num_params,
-            initial_params=scipy.concatenate((k.params, w.params)),
-            fixed_params=scipy.concatenate((k.fixed_params, w.fixed_params)),
+            initial_params=np.concatenate((k.params, w.params)),
+            fixed_params=np.concatenate((k.fixed_params, w.fixed_params)),
             param_names=list(k.param_names) + list(w.param_names),
             hyperprior=k.hyperprior * w.hyperprior,
             enforce_bounds=self._enforce_bounds
@@ -491,8 +492,8 @@ class WarpedKernel(Kernel):
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         if (ni > 1).any() or (nj > 1).any():
             raise ValueError("Derivative orders greater than one are not supported!")
-        wXi = scipy.zeros_like(Xi)
-        wXj = scipy.zeros_like(Xj)
+        wXi = np.zeros_like(Xi)
+        wXj = np.zeros_like(Xj)
         for d in range(0, self.num_dim):
             wXi[:, d] = self.w(Xi[:, d], d, 0)
             wXj[:, d] = self.w(Xj[:, d], d, 0)
@@ -550,7 +551,7 @@ class WarpedKernel(Kernel):
     
     @fixed_params.setter
     def fixed_params(self, value):
-        value = scipy.asarray(value, dtype=bool)
+        value = np.asarray(value, dtype=bool)
         self.k.fixed_params = value[:self.k.num_params]
         self.w.fixed_params = value[self.k.num_params:self.k.num_params + self.w.num_params]
     
@@ -560,7 +561,7 @@ class WarpedKernel(Kernel):
     
     @params.setter
     def params(self, value):
-        value = scipy.asarray(value, dtype=float)
+        value = np.asarray(value, dtype=float)
         self.K_up_to_date = False
         self.k.params = value[:self.k.num_params]
         self.w.params = value[self.k.num_params:self.k.num_params + self.w.num_params]
@@ -582,7 +583,7 @@ class WarpedKernel(Kernel):
     def free_params(self, value):
         """Set the free parameters. Note that this bypasses enforce_bounds.
         """
-        value = scipy.asarray(value, dtype=float)
+        value = np.asarray(value, dtype=float)
         self.K_up_to_date = False
         self.k.free_params = value[:self.k.num_free_params]
         self.w.free_params = value[self.k.num_free_params:self.k.num_free_params + self.w.num_free_params]
@@ -593,7 +594,7 @@ class WarpedKernel(Kernel):
     
     @free_param_bounds.setter
     def free_param_bounds(self, value):
-        value = scipy.asarray(value, dtype=float)
+        value = np.asarray(value, dtype=float)
         self.k.free_param_bounds = value[:self.k.num_free_params]
         self.w.free_param_bounds = value[self.k.num_free_params:self.k.num_free_params + self.w.num_free_params]
     
@@ -603,7 +604,7 @@ class WarpedKernel(Kernel):
     
     @free_param_names.setter
     def free_param_names(self, value):
-        value = scipy.asarray(value, dtype=str)
+        value = np.asarray(value, dtype=str)
         self.K_up_to_date = False
         self.k.free_param_names = value[:self.k.num_free_params]
         self.w.free_param_names = value[self.k.num_free_params:self.k.num_free_params + self.w.num_free_params]
@@ -621,7 +622,7 @@ class WarpedKernel(Kernel):
         ValueError
             If the length of `new_params` is not consistent with :py:attr:`self.params`.
         """
-        new_params = scipy.asarray(new_params, dtype=float)
+        new_params = np.asarray(new_params, dtype=float)
         
         if len(new_params) == len(self.free_params):
             num_free_k = sum(~self.k.fixed_params)
@@ -692,8 +693,8 @@ class LinearWarpedKernel(WarpedKernel):
         This list must have length equal to `k.num_dim`.
     """
     def __init__(self, k, a, b):
-        a = scipy.atleast_1d(scipy.asarray(a, dtype=float))
-        b = scipy.atleast_1d(scipy.asarray(b, dtype=float))
+        a = np.atleast_1d(np.asarray(a, dtype=float))
+        b = np.atleast_1d(np.asarray(b, dtype=float))
         if len(a) != k.num_dim:
             raise ValueError("a must have length equal to k.num_dim!")
         if len(b) != k.num_dim:
@@ -710,7 +711,7 @@ class LinearWarpedKernel(WarpedKernel):
             num_dim=k.num_dim,
             initial_params=initial_params,
             param_bounds=param_bounds,
-            fixed_params=scipy.ones_like(initial_params, dtype=bool),
+            fixed_params=np.ones_like(initial_params, dtype=bool),
             param_names=param_names
         )
         super(LinearWarpedKernel, self).__init__(k, w)
@@ -737,9 +738,9 @@ class ISplineWarpedKernel(WarpedKernel):
         try:
             iter(nt)
         except TypeError:
-            nt = nt * scipy.ones(k.num_dim, dtype=int)
+            nt = nt * np.ones(k.num_dim, dtype=int)
         else:
-            nt = scipy.asarray(nt, dtype=int)
+            nt = np.asarray(nt, dtype=int)
             if len(nt) != k.num_dim:
                 raise ValueError("nt must have length equal to k.num_dim!")
         param_names = []

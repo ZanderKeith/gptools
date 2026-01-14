@@ -23,6 +23,7 @@ from __future__ import division
 from .core import Kernel
 
 import scipy
+import numpy as np
 
 class DiagonalNoiseKernel(Kernel):
     """Kernel that has constant, independent noise (i.e., a diagonal kernel).
@@ -56,11 +57,11 @@ class DiagonalNoiseKernel(Kernel):
         try:
             iter(n)
         except TypeError:
-            self.n = n * scipy.ones(num_dim, dtype=int)
+            self.n = n * np.ones(num_dim, dtype=int)
         else:
             if len(n) != num_dim:
                 raise ValueError("Length of n must be equal to num_dim!")
-            self.n = scipy.asarray(n, dtype=int)
+            self.n = np.asarray(n, dtype=int)
         if initial_noise is not None:
             initial_noise = [initial_noise]
         if noise_bound is not None:
@@ -101,13 +102,13 @@ class DiagonalNoiseKernel(Kernel):
             Covariances for each of the `M` `Xi`, `Xj` pairs.
         """
         if symmetric:
-            val = self.params[0]**2 * scipy.asarray(((Xi == Xj) & (ni == self.n) & (nj == self.n)).all(axis=1), dtype=float).flatten()
+            val = self.params[0]**2 * np.asarray(((Xi == Xj) & (ni == self.n) & (nj == self.n)).all(axis=1), dtype=float).flatten()
             if hyper_deriv is None:
                 return val
             else:
                 return 2.0 * val / self.params[hyper_deriv]
         else:
-            return scipy.zeros(Xi.shape[0])
+            return np.zeros(Xi.shape[0])
 
 class ZeroKernel(DiagonalNoiseKernel):
     """Kernel that always evaluates to zero, used as the default noise kernel.
@@ -149,4 +150,4 @@ class ZeroKernel(DiagonalNoiseKernel):
         Kij : :py:class:`Array`, (`M`,)
             Covariances for each of the `M` `Xi`, `Xj` pairs.
         """
-        return scipy.zeros(Xi.shape[0], dtype=float)
+        return np.zeros(Xi.shape[0], dtype=float)

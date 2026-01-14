@@ -30,6 +30,7 @@ from __future__ import division
 from .utils import unique_rows, UniformJointPrior, MaskedBounds
 
 import scipy
+import numpy as np
 import inspect
 
 class MeanFunction(object):
@@ -128,7 +129,7 @@ class MeanFunction(object):
             param_names = [''] * self.num_params
         elif len(param_names) != self.num_params:
             raise ValueError("param_names must be a list of length num_params!")
-        self.param_names = scipy.asarray(param_names, dtype=str)
+        self.param_names = np.asarray(param_names, dtype=str)
         
         self.enforce_bounds = enforce_bounds
         
@@ -139,14 +140,14 @@ class MeanFunction(object):
                 raise ValueError(
                     "Must pass explicit parameter values if fixing parameters!"
                 )
-            initial_params = scipy.ones(self.num_params, dtype=float)
-            fixed_params = scipy.zeros(self.num_params, dtype=float)
+            initial_params = np.ones(self.num_params, dtype=float)
+            fixed_params = np.zeros(self.num_params, dtype=float)
         else:
             if len(initial_params) != self.num_params:
                 raise ValueError("Length of initial_params must be equal to num_params!")
             # Handle default case of fixed_params: no fixed parameters.
             if fixed_params is None:
-                fixed_params = scipy.zeros(self.num_params, dtype=float)
+                fixed_params = np.zeros(self.num_params, dtype=float)
             else:
                 if len(fixed_params) != self.num_params:
                     raise ValueError("Length of fixed_params must be equal to num_params!")
@@ -173,8 +174,8 @@ class MeanFunction(object):
             except TypeError:
                 pass
         
-        self.params = scipy.asarray(initial_params, dtype=float)
-        self.fixed_params = scipy.asarray(fixed_params, dtype=bool)
+        self.params = np.asarray(initial_params, dtype=float)
+        self.fixed_params = np.asarray(fixed_params, dtype=bool)
         self.hyperprior = hyperprior
     
     def __call__(self, X, n, hyper_deriv=None):
@@ -189,10 +190,10 @@ class MeanFunction(object):
         hyper_deriv : int or None, optional
             Index of parameter to take derivative with respect to.
         """
-        n = scipy.atleast_2d(scipy.asarray(n, dtype=int))
-        X = scipy.atleast_2d(scipy.asarray(X))
+        n = np.atleast_2d(np.asarray(n, dtype=int))
+        X = np.atleast_2d(np.asarray(X))
         n_unique = unique_rows(n)
-        mu = scipy.zeros(X.shape[0])
+        mu = np.zeros(X.shape[0])
         for nn in n_unique:
             idxs = (n == nn).all(axis=1)
             mu[idxs] = self.fun(X[idxs, :], nn, *self.params, hyper_deriv=hyper_deriv)
@@ -216,7 +217,7 @@ class MeanFunction(object):
             New parameter values, ordered as dictated by the docstring for the
             class.
         """
-        new_params = scipy.asarray(new_params, dtype=float)
+        new_params = np.asarray(new_params, dtype=float)
         
         if len(new_params) == len(self.free_params):
             if self.enforce_bounds:
@@ -239,7 +240,7 @@ class MeanFunction(object):
     def free_param_idxs(self):
         """Returns the indices of the free parameters in the main arrays of parameters, etc.
         """
-        return scipy.arange(0, self.num_params)[~self.fixed_params]
+        return np.arange(0, self.num_params)[~self.fixed_params]
     
     @property
     def free_params(self):
@@ -254,7 +255,7 @@ class MeanFunction(object):
     
     @free_params.setter
     def free_params(self, value):
-        self.params[self.free_param_idxs] = scipy.asarray(value, dtype=float)
+        self.params[self.free_param_idxs] = np.asarray(value, dtype=float)
     
     @property
     def free_param_bounds(self):
@@ -287,7 +288,7 @@ class MeanFunction(object):
     @free_param_names.setter
     def free_param_names(self, value):
         # Cast to array in case it hasn't been done already:
-        self.param_names = scipy.asarray(self.param_names, dtype=str)
+        self.param_names = np.asarray(self.param_names, dtype=str)
         self.param_names[~self.fixed_params] = value
 
 def constant(X, n, mu, hyper_deriv=None):
@@ -295,11 +296,11 @@ def constant(X, n, mu, hyper_deriv=None):
     """
     if (n == 0).all():
         if hyper_deriv is not None:
-            return scipy.ones(X.shape[0])
+            return np.ones(X.shape[0])
         else:
-            return mu * scipy.ones(X.shape[0])
+            return mu * np.ones(X.shape[0])
     else:
-        return scipy.zeros(X.shape[0])
+        return np.zeros(X.shape[0])
 
 class ConstantMeanFunction(MeanFunction):
     """Class implementing a constant mean function suitable for use with :py:class:`GaussianProcess`.
@@ -328,8 +329,8 @@ def mtanh(alpha, z):
     z : float or array
         The coordinate of the mtanh.
     """
-    z = scipy.asarray(z)
-    ez = scipy.exp(z)
+    z = np.asarray(z)
+    ez = np.exp(z)
     enz = 1.0 / ez
     return ((1 + alpha * z) * ez - enz) / (ez + enz)
 
@@ -363,23 +364,23 @@ def mtanh_profile(X, n, x0, delta, alpha, h, b, hyper_deriv=None):
     if n[0] == 0:
         if hyper_deriv is not None:
             if hyper_deriv == 0:
-                return (h - b) / (2.0 * delta * (scipy.cosh(z))**2) * (
-                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z))
+                return (h - b) / (2.0 * delta * (np.cosh(z))**2) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + np.exp(2.0 * z))
                 )
             elif hyper_deriv == 1:
-                return -(h - b) * z / (2.0 * delta * (scipy.cosh(z))**2) * (
-                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z))
+                return -(h - b) * z / (2.0 * delta * (np.cosh(z))**2) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + np.exp(2.0 * z))
                 )
             elif hyper_deriv == 2:
-                ez = scipy.exp(z)
+                ez = np.exp(z)
                 enz = 1.0 / ez
                 return (h - b) / 2.0 * z * ez / (ez + enz)
             elif hyper_deriv == 3:
-                ez = scipy.exp(z)
+                ez = np.exp(z)
                 enz = 1.0 / ez
                 return  0.5 * (1.0 + ((1.0 + alpha * z) * ez - enz) / (ez + enz))
             elif hyper_deriv == 4:
-                ez = scipy.exp(z)
+                ez = np.exp(z)
                 enz = 1.0 / ez
                 return  0.5 * (1.0 - ((1.0 + alpha * z) * ez - enz) / (ez + enz))
             else:
@@ -389,31 +390,31 @@ def mtanh_profile(X, n, x0, delta, alpha, h, b, hyper_deriv=None):
     elif n[0] == 1:
         if hyper_deriv is not None:
             if hyper_deriv == 0:
-                return -(h - b) / (2.0 * delta**2.0 * (scipy.cosh(z))**2.0) * (
-                    alpha - (alpha * z + 2) * scipy.tanh(z)
+                return -(h - b) / (2.0 * delta**2.0 * (np.cosh(z))**2.0) * (
+                    alpha - (alpha * z + 2) * np.tanh(z)
                 )
             elif hyper_deriv == 1:
-                return (h - b) / (2.0 * delta**2.0 * (scipy.cosh(z))**2.0) * (
-                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z)) +
-                    z * (alpha - (alpha * z + 2) * scipy.tanh(z))
+                return (h - b) / (2.0 * delta**2.0 * (np.cosh(z))**2.0) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + np.exp(2.0 * z)) +
+                    z * (alpha - (alpha * z + 2) * np.tanh(z))
                 )
             elif hyper_deriv == 2:
-                return -(h - b) / (8.0 * delta * (scipy.cosh(z))**2.0) * (
-                    1.0 + 2.0 * z + scipy.exp(2.0 * z)
+                return -(h - b) / (8.0 * delta * (np.cosh(z))**2.0) * (
+                    1.0 + 2.0 * z + np.exp(2.0 * z)
                 )
             elif hyper_deriv == 3:
-                return -1.0 / (2.0 * delta * (scipy.cosh(z))**2.0) * (
-                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z))
+                return -1.0 / (2.0 * delta * (np.cosh(z))**2.0) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + np.exp(2.0 * z))
                 )
             elif hyper_deriv == 4:
-                return 1.0 / (2.0 * delta * (scipy.cosh(z))**2.0) * (
-                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z))
+                return 1.0 / (2.0 * delta * (np.cosh(z))**2.0) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + np.exp(2.0 * z))
                 )
             else:
                 raise ValueError("Invalid value for hyper_deriv, " + str(hyper_deriv))
         else:
-            return -(h - b) / (2.0 * delta * (scipy.cosh(z))**2) * (
-                1 + alpha / 4.0 * (1 + 2 * z + scipy.exp(2 * z))
+            return -(h - b) / (2.0 * delta * (np.cosh(z))**2) * (
+                1 + alpha / 4.0 * (1 + 2 * z + np.exp(2 * z))
             )
     else:
         raise NotImplementedError("Derivatives of order greater than 1 are not supported!")
@@ -460,16 +461,16 @@ def linear(X, n, *args, **kwargs):
         form `m0, m1, ..., b`.
     """
     hyper_deriv = kwargs.pop('hyper_deriv', None)
-    m = scipy.asarray(args[:-1])
+    m = np.asarray(args[:-1])
     b = args[-1]
     if sum(n) > 1:
-        return scipy.zeros(X.shape[0])
+        return np.zeros(X.shape[0])
     elif sum(n) == 0:
         if hyper_deriv is not None:
             if hyper_deriv < len(m):
                 return X[:, hyper_deriv]
             elif hyper_deriv == len(m):
-                return scipy.ones(X.shape[0])
+                return np.ones(X.shape[0])
             else:
                 raise ValueError("Invalid value for hyper_deriv, " + str(hyper_deriv))
         else:
@@ -478,10 +479,10 @@ def linear(X, n, *args, **kwargs):
         # sum(n) == 1:
         if hyper_deriv is not None:
             if n[hyper_deriv] == 1:
-                return scipy.ones(X.shape[0])
+                return np.ones(X.shape[0])
             else:
-                return scipy.zeros(X.shape[0])
-        return m[n == 1] * scipy.ones(X.shape[0])
+                return np.zeros(X.shape[0])
+        return m[n == 1] * np.ones(X.shape[0])
 
 class LinearMeanFunction(MeanFunction):
     """Linear mean function suitable for use with :py:class:`GaussianProcess`.

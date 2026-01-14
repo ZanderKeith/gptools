@@ -34,6 +34,7 @@ except ImportError:
         ImportWarning
     )
 import scipy
+import numpy as np
 import scipy.interpolate
 import inspect
 
@@ -65,8 +66,8 @@ def tanh_warp_arb(X, l1, l2, lw, x0):
     """
     if isinstance(X, scipy.ndarray):
         if isinstance(X, scipy.matrix):
-            X = scipy.asarray(X, dtype=float)
-        return 0.5 * ((l1 + l2) - (l1 - l2) * scipy.tanh((X - x0) / lw))
+            X = np.asarray(X, dtype=float)
+        return 0.5 * ((l1 + l2) - (l1 - l2) * np.tanh((X - x0) / lw))
     else:
         return 0.5 * ((l1 + l2) - (l1 - l2) * mpmath.tanh((X - x0) / lw))
 
@@ -98,8 +99,8 @@ def gauss_warp_arb(X, l1, l2, lw, x0):
     """
     if isinstance(X, scipy.ndarray):
         if isinstance(X, scipy.matrix):
-            X = scipy.asarray(X, dtype=float)
-        return l1 - (l1 - l2) * scipy.exp(-4.0 * scipy.log(2.0) * (X - x0)**2.0 / (lw**2.0))
+            X = np.asarray(X, dtype=float)
+        return l1 - (l1 - l2) * np.exp(-4.0 * np.log(2.0) * (X - x0)**2.0 / (lw**2.0))
     else:
         return l1 - (l1 - l2) * mpmath.exp(-4.0 * mpmath.log(2.0) * (X - x0)**2.0 / (lw**2.0))
 
@@ -146,11 +147,11 @@ class GibbsFunction1dArb(object):
         lj = self.warp_function(Xj, l1, l2, lw, x0)
         if isinstance(Xi, scipy.ndarray):
             if isinstance(Xi, scipy.matrix):
-                Xi = scipy.asarray(Xi, dtype=float)
-                Xj = scipy.asarray(Xj, dtype=float)
+                Xi = np.asarray(Xi, dtype=float)
+                Xj = np.asarray(Xj, dtype=float)
             return sigmaf**2.0 * (
-                scipy.sqrt(2.0 * li * lj / (li**2.0 + lj**2.0)) *
-                scipy.exp(-(Xi - Xj)**2.0 / (li**2 + lj**2))
+                np.sqrt(2.0 * li * lj / (li**2.0 + lj**2.0)) *
+                np.exp(-(Xi - Xj)**2.0 / (li**2 + lj**2))
             )
         else:
             return sigmaf**2.0 * (
@@ -321,11 +322,11 @@ class GibbsKernel1d(Kernel):
                 "Hyperparameter derivatives have not been implemented!"
             )
 
-        n_combined = scipy.asarray(scipy.hstack((ni, nj)), dtype=int)
+        n_combined = np.asarray(np.hstack((ni, nj)), dtype=int)
         n_combined_unique = unique_rows(n_combined)
 
-        x = scipy.asarray(Xi, dtype=float)[:, 0]
-        y = scipy.asarray(Xj, dtype=float)[:, 0]
+        x = np.asarray(Xi, dtype=float)[:, 0]
+        y = np.asarray(Xj, dtype=float)[:, 0]
 
         lx = self.l_func(x, 0, *self.params[1:])
         ly = self.l_func(y, 0, *self.params[1:])
@@ -335,19 +336,19 @@ class GibbsKernel1d(Kernel):
         x_y = x - y
         lx2ly2 = lx**2 + ly**2
 
-        k = scipy.zeros(Xi.shape[0], dtype=float)
+        k = np.zeros(Xi.shape[0], dtype=float)
         for n_combined_state in n_combined_unique:
             idxs = (n_combined == n_combined_state).all(axis=1)
             # Derviative expressions evaluated with Mathematica, assuming l>0.
-            if (n_combined_state == scipy.asarray([0, 0])).all():
+            if (n_combined_state == np.asarray([0, 0])).all():
                 k[idxs] = (
-                    scipy.sqrt(2.0 * lx[idxs] * ly[idxs] / lx2ly2[idxs]) *
-                    scipy.exp(-x_y[idxs]**2 / lx2ly2[idxs])
+                    np.sqrt(2.0 * lx[idxs] * ly[idxs] / lx2ly2[idxs]) *
+                    np.exp(-x_y[idxs]**2 / lx2ly2[idxs])
                 )
-            elif (n_combined_state == scipy.asarray([1, 0])).all():
+            elif (n_combined_state == np.asarray([1, 0])).all():
                 k[idxs] = (
                     (
-                        scipy.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                        np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
                         ly[idxs] * (
                             -4 * x_y[idxs] * lx[idxs]**3 -
                             4 * x_y[idxs] * lx[idxs] * ly[idxs]**2 +
@@ -355,12 +356,12 @@ class GibbsKernel1d(Kernel):
                             lx[idxs]**4 * lx1[idxs] +
                             ly[idxs]**4 * lx1[idxs]
                         )
-                    ) / (scipy.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
+                    ) / (np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
                 )
-            elif (n_combined_state == scipy.asarray([0, 1])).all():
+            elif (n_combined_state == np.asarray([0, 1])).all():
                 k[idxs] = (
                     (
-                        scipy.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                        np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
                         lx[idxs] * (
                             4 * x_y[idxs] * ly[idxs]**3 +
                             4 * x_y[idxs] * ly[idxs] * lx[idxs]**2 +
@@ -368,12 +369,12 @@ class GibbsKernel1d(Kernel):
                             ly[idxs]**4 * ly1[idxs] +
                             lx[idxs]**4 * ly1[idxs]
                         )
-                    ) / (scipy.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
+                    ) / (np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
                 )
-            elif (n_combined_state == scipy.asarray([1, 1])).all():
+            elif (n_combined_state == np.asarray([1, 1])).all():
                 k[idxs] = (
                     (
-                        scipy.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                        np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
                         (
                             -lx[idxs]**8 * lx1[idxs] * ly1[idxs] +
                             4 * lx[idxs]**7 * (2 * ly[idxs] - x_y[idxs] * ly1[idxs]) -
@@ -412,7 +413,7 @@ class GibbsKernel1d(Kernel):
                                 2 * ly[idxs]**4 * ly1[idxs]
                             )
                         )
-                    ) / (2 * scipy.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**4.5)
+                    ) / (2 * np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**4.5)
                 )
             else:
                 raise NotImplementedError(
@@ -456,9 +457,9 @@ def tanh_warp(x, n, l1, l2, lw, x0):
         If `n` > 1.
     """
     if n == 0:
-        return (l1 + l2) / 2.0 - (l1 - l2) / 2.0 * scipy.tanh((x - x0) / lw)
+        return (l1 + l2) / 2.0 - (l1 - l2) / 2.0 * np.tanh((x - x0) / lw)
     elif n == 1:
-        return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+        return -(l1 - l2) / (2.0 * lw) * (np.cosh((x - x0) / lw))**(-2.0)
     else:
         raise NotImplementedError(
             "Only derivatives up to order 1 are supported!"
@@ -543,16 +544,16 @@ def double_tanh_warp(x, n, lcore, lmid, ledge, la, lb, xa, xb):
     NotImplementedError
         If `n` > 1.
     """
-    a, b, c = scipy.dot([[-0.5, 0, 0.5], [0, 0.5, -0.5], [0.5, 0.5, 0]],
+    a, b, c = np.dot([[-0.5, 0, 0.5], [0, 0.5, -0.5], [0.5, 0.5, 0]],
                         [[lcore], [ledge], [lmid]])
     a = a[0]
     b = b[0]
     c = c[0]
     if n == 0:
-        return a * scipy.tanh((x - xa) / la) + b * scipy.tanh((x - xb) / lb) + c
+        return a * np.tanh((x - xa) / la) + b * np.tanh((x - xb) / lb) + c
     elif n == 1:
-        return (a / la * (scipy.cosh((x - xa) / la))**(-2.0) +
-                b / lb * (scipy.cosh((x - xb) / lb))**(-2.0))
+        return (a / la * (np.cosh((x - xa) / la))**(-2.0) +
+                b / lb * (np.cosh((x - xb) / lb))**(-2.0))
     else:
         raise NotImplementedError("Only derivatives up to order 1 are supported!")
 
@@ -828,8 +829,8 @@ def exp_gauss_warp(X, n, l0, *msb):
     *msb : floats
         Means, standard deviations and weights for each Gaussian, in that order.
     """
-    X = scipy.asarray(X, dtype=float)
-    msb = scipy.asarray(msb, dtype=float)
+    X = np.asarray(X, dtype=float)
+    msb = np.asarray(msb, dtype=float)
     mm = msb[:len(msb) / 3]
     ss = msb[len(msb) / 3:2 * len(msb) / 3]
     bb = msb[2 * len(msb) / 3:]
@@ -837,19 +838,19 @@ def exp_gauss_warp(X, n, l0, *msb):
     # This is done with for-loops, because trying to get fancy with
     # broadcasting was being too memory-intensive for some reason.
     if n == 0:
-        l = scipy.zeros_like(X)
+        l = np.zeros_like(X)
         for m, s, b in zip(mm, ss, bb):
-            l += b * scipy.exp(-(X - m)**2.0 / (2.0 * s**2.0))
-        l = l0 * scipy.exp(l)
+            l += b * np.exp(-(X - m)**2.0 / (2.0 * s**2.0))
+        l = l0 * np.exp(l)
         return l
     elif n == 1:
-        l1 = scipy.zeros_like(X)
-        l2 = scipy.zeros_like(X)
+        l1 = np.zeros_like(X)
+        l2 = np.zeros_like(X)
         for m, s, b in zip(mm, ss, bb):
-            term = b * scipy.exp(-(X - m)**2.0 / (2.0 * s**2.0))
+            term = b * np.exp(-(X - m)**2.0 / (2.0 * s**2.0))
             l1 += term
             l2 += term * (X - m) / s**2.0
-        l = -l0 * scipy.exp(l1) * l2
+        l = -l0 * np.exp(l1) * l2
         return l
     else:
         raise NotImplementedError("Only n <= 1 is supported!")
@@ -930,15 +931,15 @@ class BSplineWarp(object):
         *tC : `2M + k - 1` floats
             The `M` knots followed by the `M + k - 1` coefficients to use.
         """
-        X = scipy.asarray(X, dtype=float)
+        X = np.asarray(X, dtype=float)
         shape = X.shape
         if X.ndim == 2:
             X = X[:, 0]
-        tC = scipy.asarray(tC, dtype=float)
+        tC = np.asarray(tC, dtype=float)
         nt = (len(tC) - self.k + 1) // 2
         t = tC[:nt]
         C = tC[nt:]
-        return scipy.reshape(spev(t, C, self.k, X, n=n), shape)
+        return np.reshape(spev(t, C, self.k, X, n=n), shape)
 
 
 class GibbsKernel1dBSpline(GibbsKernel1d):
@@ -1011,7 +1012,7 @@ class GPWarp(object):
         if k is None:
             from .squared_exponential import SquaredExponentialKernel
             k = SquaredExponentialKernel(fixed_params=[True, False])
-        self.gp = GaussianProcess(k, X=scipy.zeros(npts), y=scipy.zeros(npts))
+        self.gp = GaussianProcess(k, X=np.zeros(npts), y=np.zeros(npts))
 
     def __call__(self, X, n, *hpXy):
         """Evaluate the length scale.
@@ -1026,7 +1027,7 @@ class GPWarp(object):
             The free hyperparameters of the GP, then the points to set the
             value at, then the values to use.
         """
-        hpXy = scipy.asarray(hpXy)
+        hpXy = np.asarray(hpXy)
         hp = hpXy[:len(self.gp.free_params)]
         X_grid = hpXy[len(self.gp.free_params):len(self.gp.free_params) + self.npts]
         y_grid = hpXy[len(self.gp.free_params) + self.npts:]

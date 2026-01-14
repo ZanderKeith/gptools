@@ -26,6 +26,7 @@ import scipy
 import scipy.optimize
 import scipy.special
 import scipy.stats
+import numpy as np
 import numpy.random
 import copy
 import itertools
@@ -178,7 +179,7 @@ class CombinedBounds(object):
     def __invert__(self):
         """Return the elementwise inverse.
         """
-        return ~scipy.asarray(self)
+        return ~np.asarray(self)
     
     def __str__(self):
         """Get user-friendly string representation.
@@ -298,7 +299,7 @@ class ProductJointPrior(JointPrior):
             Values between 0 and 1 to evaluate inverse CDF at.
         """
         p1_num_params = len(self.p1.bounds)
-        return scipy.concatenate(
+        return np.concatenate(
             (
                 self.p1.sample_u(q[:p1_num_params]),
                 self.p2.sample_u(q[p1_num_params:])
@@ -322,7 +323,7 @@ class ProductJointPrior(JointPrior):
             Values to evaluate CDF at.
         """
         p1_num_params = len(self.p1.bounds)
-        return scipy.concatenate(
+        return np.concatenate(
             (
                 self.p1.elementwise_cdf(p[:p1_num_params]),
                 self.p2.elementwise_cdf(p[p1_num_params:])
@@ -344,9 +345,9 @@ class ProductJointPrior(JointPrior):
         draw_2 = self.p2.random_draw(size=size)
         
         if draw_1.ndim == 1:
-            return scipy.hstack((draw_1, draw_2))
+            return np.hstack((draw_1, draw_2))
         else:
-            return scipy.vstack((draw_1, draw_2))
+            return np.vstack((draw_1, draw_2))
 
 class UniformJointPrior(JointPrior):
     """Uniform prior over the specified bounds.
@@ -383,9 +384,9 @@ class UniformJointPrior(JointPrior):
         ll = 0.0
         for v, b in zip(theta, self.bounds):
             if b[0] <= v and v <= b[1]:
-                ll += -scipy.log(b[1] - b[0])
+                ll += -np.log(b[1] - b[0])
             else:
-                ll = -scipy.inf
+                ll = -np.inf
                 break
         return ll
     
@@ -404,14 +405,14 @@ class UniformJointPrior(JointPrior):
         q : array of float
             Values between 0 and 1 to evaluate inverse CDF at.
         """
-        q = scipy.atleast_1d(q)
+        q = np.atleast_1d(q)
         if len(q) != len(self.bounds):
             raise ValueError("length of q must equal the number of parameters!")
         if q.ndim != 1:
             raise ValueError("q must be one-dimensional!")
         if (q < 0).any() or (q > 1).any():
             raise ValueError("q must be within [0, 1]!")
-        return scipy.asarray([(b[1] - b[0]) * v + b[0] for v, b in zip(q, self.bounds)])
+        return np.asarray([(b[1] - b[0]) * v + b[0] for v, b in zip(q, self.bounds)])
     
     def elementwise_cdf(self, p):
         r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
@@ -429,12 +430,12 @@ class UniformJointPrior(JointPrior):
         p : array-like, (`num_params`,)
             Values to evaluate CDF at.
         """
-        p = scipy.atleast_1d(p)
+        p = np.atleast_1d(p)
         if len(p) != len(self.bounds):
             raise ValueError("length of p must equal the number of parameters!")
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
-        c = scipy.zeros(len(self.bounds))
+        c = np.zeros(len(self.bounds))
         for k in range(0, len(self.bounds)):
             if p[k] <= self.bounds[k][0]:
                 c[k] = 0.0
@@ -453,7 +454,7 @@ class UniformJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return scipy.asarray([numpy.random.uniform(low=b[0], high=b[1], size=size) for b in self.bounds])
+        return np.asarray([numpy.random.uniform(low=b[0], high=b[1], size=size) for b in self.bounds])
 
 class CoreEdgeJointPrior(UniformJointPrior):
     """Prior for use with Gibbs kernel warping functions with an inequality constraint between the core and edge length scales.
@@ -474,9 +475,9 @@ class CoreEdgeJointPrior(UniformJointPrior):
         bounds_new[2] = (self.bounds[2][0], theta[1])
         for v, b in zip(theta, bounds_new):
             if b[0] <= v and v <= b[1]:
-                ll += -scipy.log(b[1] - b[0])
+                ll += -np.log(b[1] - b[0])
             else:
-                ll = -scipy.inf
+                ll = -np.inf
                 break
         return ll
     
@@ -538,7 +539,7 @@ class CoreEdgeJointPrior(UniformJointPrior):
         except TypeError:
             out_shape.append(size)
         
-        out = scipy.zeros(out_shape)
+        out = np.zeros(out_shape)
         for j in range(0, len(self.bounds)):
             if j != 2:
                 out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
@@ -577,9 +578,9 @@ class CoreMidEdgeJointPrior(UniformJointPrior):
         bounds_new[6] = (self.bounds[6][0], theta[7])
         for v, b in zip(theta, bounds_new):
             if b[0] <= v and v <= b[1]:
-                ll += -scipy.log(b[1] - b[0])
+                ll += -np.log(b[1] - b[0])
             else:
-                ll = -scipy.inf
+                ll = -np.inf
                 break
         return ll
     
@@ -641,7 +642,7 @@ class CoreMidEdgeJointPrior(UniformJointPrior):
         except TypeError:
             out_shape.append(size)
         
-        out = scipy.zeros(out_shape)
+        out = np.zeros(out_shape)
         # sigma_f, lm, la, lb, xb:
         for j in [0, 1, 2, 3, 4, 5, 7]:
             out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
@@ -720,14 +721,14 @@ class IndependentJointPrior(JointPrior):
         q : array of float
             Values between 0 and 1 to evaluate inverse CDF at.
         """
-        q = scipy.atleast_1d(q)
+        q = np.atleast_1d(q)
         if len(q) != len(self.univariate_priors):
             raise ValueError("length of q must equal the number of parameters!")
         if q.ndim != 1:
             raise ValueError("q must be one-dimensional!")
         if (q < 0).any() or (q > 1).any():
             raise ValueError("q must be within [0, 1]!")
-        return scipy.asarray([p.ppf(v) for v, p in zip(q, self.univariate_priors)])
+        return np.asarray([p.ppf(v) for v, p in zip(q, self.univariate_priors)])
     
     def elementwise_cdf(self, p):
         r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
@@ -745,12 +746,12 @@ class IndependentJointPrior(JointPrior):
         p : array-like, (`num_params`,)
             Values to evaluate CDF at.
         """
-        p = scipy.atleast_1d(p)
+        p = np.atleast_1d(p)
         if len(p) != len(self.univariate_priors):
             raise ValueError("length of p must equal the number of parameters!")
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
-        return scipy.asarray([pr.cdf(v) for v, pr in zip(p, self.univariate_priors)])
+        return np.asarray([pr.cdf(v) for v, pr in zip(p, self.univariate_priors)])
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -761,7 +762,7 @@ class IndependentJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return scipy.asarray([p.rvs(size=size) for p in self.univariate_priors])
+        return np.asarray([p.rvs(size=size) for p in self.univariate_priors])
 
 class NormalJointPrior(JointPrior):
     """Joint prior for which each hyperparameter has a normal prior with fixed hyper-hyperparameters.
@@ -775,8 +776,8 @@ class NormalJointPrior(JointPrior):
     """
     def __init__(self, mu, sigma, **kwargs):
         super(NormalJointPrior, self).__init__(**kwargs)
-        sigma = scipy.atleast_1d(scipy.asarray(sigma, dtype=float))
-        mu = scipy.atleast_1d(scipy.asarray(mu, dtype=float))
+        sigma = np.atleast_1d(np.asarray(sigma, dtype=float))
+        mu = np.atleast_1d(np.asarray(mu, dtype=float))
         if sigma.shape != mu.shape:
             raise ValueError("sigma and mu must have the same shape!")
         if sigma.ndim != 1:
@@ -823,14 +824,14 @@ class NormalJointPrior(JointPrior):
         q : array of float
             Values between 0 and 1 to evaluate inverse CDF at.
         """
-        q = scipy.atleast_1d(q)
+        q = np.atleast_1d(q)
         if len(q) != len(self.sigma):
             raise ValueError("length of q must equal the number of parameters!")
         if q.ndim != 1:
             raise ValueError("q must be one-dimensional!")
         if (q < 0).any() or (q > 1).any():
             raise ValueError("q must be within [0, 1]!")
-        return scipy.asarray([scipy.stats.norm.ppf(v, loc=m, scale=s) for v, s, m in zip(q, self.sigma, self.mu)])
+        return np.asarray([scipy.stats.norm.ppf(v, loc=m, scale=s) for v, s, m in zip(q, self.sigma, self.mu)])
     
     def elementwise_cdf(self, p):
         r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
@@ -848,12 +849,12 @@ class NormalJointPrior(JointPrior):
         p : array-like, (`num_params`,)
             Values to evaluate CDF at.
         """
-        p = scipy.atleast_1d(p)
+        p = np.atleast_1d(p)
         if len(p) != len(self.sigma):
             raise ValueError("length of p must equal the number of parameters!")
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
-        return scipy.asarray([scipy.stats.norm.cdf(v, loc=m, scale=s) for v, s, m in zip(p, self.sigma, self.mu)])
+        return np.asarray([scipy.stats.norm.cdf(v, loc=m, scale=s) for v, s, m in zip(p, self.sigma, self.mu)])
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -864,7 +865,7 @@ class NormalJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return scipy.asarray([scipy.stats.norm.rvs(loc=m, scale=s, size=size) for s, m in zip(self.sigma, self.mu)])
+        return np.asarray([scipy.stats.norm.rvs(loc=m, scale=s, size=size) for s, m in zip(self.sigma, self.mu)])
 
 class LogNormalJointPrior(JointPrior):
     """Joint prior for which each hyperparameter has a log-normal prior with fixed hyper-hyperparameters.
@@ -878,14 +879,14 @@ class LogNormalJointPrior(JointPrior):
     """
     def __init__(self, mu, sigma, **kwargs):
         super(LogNormalJointPrior, self).__init__(**kwargs)
-        sigma = scipy.atleast_1d(scipy.asarray(sigma, dtype=float))
-        mu = scipy.atleast_1d(scipy.asarray(mu, dtype=float))
+        sigma = np.atleast_1d(np.asarray(sigma, dtype=float))
+        mu = np.atleast_1d(np.asarray(mu, dtype=float))
         if sigma.shape != mu.shape:
             raise ValueError("sigma and mu must have the same shape!")
         if sigma.ndim != 1:
             raise ValueError("sigma and mu must both be one dimensional!")
         self.sigma = sigma
-        self.emu = scipy.exp(mu)
+        self.emu = np.exp(mu)
     
     def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
@@ -897,7 +898,7 @@ class LogNormalJointPrior(JointPrior):
         """
         if hyper_deriv is not None:
             return -1.0 / theta[hyper_deriv] * (
-                1.0 + scipy.log(theta[hyper_deriv] / self.emu[hyper_deriv]) /
+                1.0 + np.log(theta[hyper_deriv] / self.emu[hyper_deriv]) /
                 self.sigma[hyper_deriv]**2.0
             )
         ll = 0
@@ -929,14 +930,14 @@ class LogNormalJointPrior(JointPrior):
         q : array of float
             Values between 0 and 1 to evaluate inverse CDF at.
         """
-        q = scipy.atleast_1d(q)
+        q = np.atleast_1d(q)
         if len(q) != len(self.sigma):
             raise ValueError("length of q must equal the number of parameters!")
         if q.ndim != 1:
             raise ValueError("q must be one-dimensional!")
         if (q < 0).any() or (q > 1).any():
             raise ValueError("q must be within [0, 1]!")
-        return scipy.asarray([scipy.stats.lognorm.ppf(v, s, loc=0, scale=em) for v, s, em in zip(q, self.sigma, self.emu)])
+        return np.asarray([scipy.stats.lognorm.ppf(v, s, loc=0, scale=em) for v, s, em in zip(q, self.sigma, self.emu)])
     
     def elementwise_cdf(self, p):
         r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
@@ -954,12 +955,12 @@ class LogNormalJointPrior(JointPrior):
         p : array-like, (`num_params`,)
             Values to evaluate CDF at.
         """
-        p = scipy.atleast_1d(p)
+        p = np.atleast_1d(p)
         if len(p) != len(self.sigma):
             raise ValueError("length of p must equal the number of parameters!")
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
-        return scipy.asarray([scipy.stats.lognorm.cdf(v, s, loc=0, scale=em) for v, s, em in zip(p, self.sigma, self.emu)])
+        return np.asarray([scipy.stats.lognorm.cdf(v, s, loc=0, scale=em) for v, s, em in zip(p, self.sigma, self.emu)])
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -970,7 +971,7 @@ class LogNormalJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return scipy.asarray([scipy.stats.lognorm.rvs(s, loc=0, scale=em, size=size) for s, em in zip(self.sigma, self.emu)])
+        return np.asarray([scipy.stats.lognorm.rvs(s, loc=0, scale=em, size=size) for s, em in zip(self.sigma, self.emu)])
 
 class GammaJointPrior(JointPrior):
     """Joint prior for which each hyperparameter has a gamma prior with fixed hyper-hyperparameters.
@@ -984,8 +985,8 @@ class GammaJointPrior(JointPrior):
     """
     def __init__(self, a, b, **kwargs):
         super(GammaJointPrior, self).__init__(**kwargs)
-        a = scipy.atleast_1d(scipy.asarray(a, dtype=float))
-        b = scipy.atleast_1d(scipy.asarray(b, dtype=float))
+        a = np.atleast_1d(np.asarray(a, dtype=float))
+        b = np.atleast_1d(np.asarray(b, dtype=float))
         if a.shape != b.shape:
             raise ValueError("a and b must have the same shape!")
         if a.ndim != 1:
@@ -1035,14 +1036,14 @@ class GammaJointPrior(JointPrior):
         q : array of float
             Values between 0 and 1 to evaluate inverse CDF at.
         """
-        q = scipy.atleast_1d(q)
+        q = np.atleast_1d(q)
         if len(q) != len(self.a):
             raise ValueError("length of q must equal the number of parameters!")
         if q.ndim != 1:
             raise ValueError("q must be one-dimensional!")
         if (q < 0).any() or (q > 1).any():
             raise ValueError("q must be within [0, 1]!")
-        return scipy.asarray([scipy.stats.gamma.ppf(v, a, loc=0, scale=1.0 / b) for v, a, b in zip(q, self.a, self.b)])
+        return np.asarray([scipy.stats.gamma.ppf(v, a, loc=0, scale=1.0 / b) for v, a, b in zip(q, self.a, self.b)])
     
     def elementwise_cdf(self, p):
         r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
@@ -1060,12 +1061,12 @@ class GammaJointPrior(JointPrior):
         p : array-like, (`num_params`,)
             Values to evaluate CDF at.
         """
-        p = scipy.atleast_1d(p)
+        p = np.atleast_1d(p)
         if len(p) != len(self.a):
             raise ValueError("length of p must equal the number of parameters!")
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
-        return scipy.asarray([scipy.stats.gamma.cdf(v, a, loc=0, scale=1.0 / b) for v, a, b in zip(p, self.a, self.b)])
+        return np.asarray([scipy.stats.gamma.cdf(v, a, loc=0, scale=1.0 / b) for v, a, b in zip(p, self.a, self.b)])
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -1076,7 +1077,7 @@ class GammaJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return scipy.asarray([scipy.stats.gamma.rvs(a, loc=0, scale=1.0 / b, size=size) for a, b in zip(self.a, self.b)])
+        return np.asarray([scipy.stats.gamma.rvs(a, loc=0, scale=1.0 / b, size=size) for a, b in zip(self.a, self.b)])
 
 class GammaJointPriorAlt(GammaJointPrior):
     """Joint prior for which each hyperparameter has a gamma prior with fixed hyper-hyperparameters.
@@ -1093,8 +1094,8 @@ class GammaJointPriorAlt(GammaJointPrior):
     """
     def __init__(self, m, s, i=1.0):
         self.i = i
-        m = scipy.atleast_1d(scipy.asarray(m, dtype=float))
-        s = scipy.atleast_1d(scipy.asarray(s, dtype=float))
+        m = np.atleast_1d(np.asarray(m, dtype=float))
+        s = np.atleast_1d(np.asarray(s, dtype=float))
         if m.shape != s.shape:
             raise ValueError("s and mu must have the same shape!")
         if m.ndim != 1:
@@ -1108,7 +1109,7 @@ class GammaJointPriorAlt(GammaJointPrior):
     
     @property
     def b(self):
-        return (self.m + scipy.sqrt(self.m**2 + 4.0 * self.s**2)) / (2.0 * self.s**2)
+        return (self.m + np.sqrt(self.m**2 + 4.0 * self.s**2)) / (2.0 * self.s**2)
 
 class SortedUniformJointPrior(JointPrior):
     """Joint prior for a set of variables which must be strictly increasing but are otherwise uniformly-distributed.
@@ -1138,13 +1139,13 @@ class SortedUniformJointPrior(JointPrior):
         """
         if hyper_deriv is not None:
             return 0.0
-        theta = scipy.asarray(theta)
-        if (scipy.sort(theta) != theta).all() or (theta < self.lb).any() or (theta > self.ub).any():
-            return -scipy.inf
+        theta = np.asarray(theta)
+        if (np.sort(theta) != theta).all() or (theta < self.lb).any() or (theta > self.ub).any():
+            return -np.inf
         else:
             return (
-                scipy.log(scipy.misc.factorial(self.num_var)) -
-                self.num_var * scipy.log(self.ub - self.lb)
+                np.log(scipy.misc.factorial(self.num_var)) -
+                self.num_var * np.log(self.ub - self.lb)
             )
     
     @property
@@ -1166,7 +1167,7 @@ class SortedUniformJointPrior(JointPrior):
         q : array of float
             Values between 0 and 1 to evaluate inverse CDF at.
         """
-        q = scipy.atleast_1d(q)
+        q = np.atleast_1d(q)
         if len(q) != self.num_var:
             raise ValueError("length of q must equal the number of parameters!")
         if q.ndim != 1:
@@ -1175,11 +1176,11 @@ class SortedUniformJointPrior(JointPrior):
             raise ValueError("q must be within [0, 1]!")
         
         # Old way, not quite correct:
-        # q = scipy.sort(q)
-        # return scipy.asarray([(self.ub - self.lb) * v + self.lb for v in q])
+        # q = np.sort(q)
+        # return np.asarray([(self.ub - self.lb) * v + self.lb for v in q])
         
         # New way, based on conditional marginals:
-        out = scipy.zeros_like(q, dtype=float)
+        out = np.zeros_like(q, dtype=float)
         out[0] = self.lb
         for d in range(0, len(out)):
             out[d] = (
@@ -1204,12 +1205,12 @@ class SortedUniformJointPrior(JointPrior):
         p : array-like, (`num_params`,)
             Values to evaluate CDF at.
         """
-        p = scipy.atleast_1d(p)
+        p = np.atleast_1d(p)
         if len(p) != len(self.bounds):
             raise ValueError("length of p must equal the number of parameters!")
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
-        c = scipy.zeros(len(self.bounds))
+        c = np.zeros(len(self.bounds))
         
         # Old way, based on sorted uniform variables:
         # for k in range(0, len(self.bounds)):
@@ -1253,7 +1254,7 @@ class SortedUniformJointPrior(JointPrior):
         except TypeError:
             out_shape.append(size)
         
-        out = scipy.sort(
+        out = np.sort(
             numpy.random.uniform(
                 low=self.lb,
                 high=self.ub,
@@ -1392,7 +1393,7 @@ def fixed_poch(a, n):
     n = int(n)
     # Direct form based on product:
     terms = [a + k for k in range(0, n)]
-    return scipy.prod(terms)
+    return np.prod(terms)
 
 def Kn2Der(nu, y, n=0):
     r"""Find the derivatives of :math:`K_\nu(y^{1/2})`.
@@ -1407,19 +1408,19 @@ def Kn2Der(nu, y, n=0):
         The order of derivative to take.
     """
     n = int(n)
-    y = scipy.asarray(y, dtype=float)
-    sqrty = scipy.sqrt(y)
+    y = np.asarray(y, dtype=float)
+    sqrty = np.sqrt(y)
     if n == 0:
         K = scipy.special.kv(nu, sqrty)
     else:
-        K = scipy.zeros_like(y)
-        x = scipy.asarray(
+        K = np.zeros_like(y)
+        x = np.asarray(
             [
                 fixed_poch(1.5 - j, j) * y**(0.5 - j)
-                for j in scipy.arange(1.0, n + 1.0, dtype=float)
+                for j in np.arange(1.0, n + 1.0, dtype=float)
             ]
         ).T
-        for k in scipy.arange(1.0, n + 1.0, dtype=float):
+        for k in np.arange(1.0, n + 1.0, dtype=float):
             K += (
                 scipy.special.kvp(nu, sqrty, n=int(k)) *
                 incomplete_bell_poly(n, int(k), x)
@@ -1462,14 +1463,14 @@ def yn2Kn2Der(nu, y, n=0, tol=5e-4, nterms=1, nu_step=0.001):
         is 0.001.
     """
     n = int(n)
-    y = scipy.asarray(y, dtype=float)
+    y = np.asarray(y, dtype=float)
     
     if n == 0:
-        K = y**(nu / 2.0) * scipy.special.kv(nu, scipy.sqrt(y))
+        K = y**(nu / 2.0) * scipy.special.kv(nu, np.sqrt(y))
         K[y == 0.0] = scipy.special.gamma(nu) / 2.0**(1.0 - nu)
     else:
-        K = scipy.zeros_like(y)
-        for k in scipy.arange(0.0, n + 1.0, dtype=float):
+        K = np.zeros_like(y)
+        for k in np.arange(0.0, n + 1.0, dtype=float):
             K += (
                 scipy.special.binom(n, k) * fixed_poch(1.0 + nu / 2.0 - k, k) *
                 y**(nu / 2.0 - k) * Kn2Der(nu, y, n=n-k)
@@ -1484,7 +1485,7 @@ def yn2Kn2Der(nu, y, n=0, tol=5e-4, nterms=1, nu_step=0.001):
                 )
             else:
                 if n > nu:
-                    K[mask] = scipy.special.gamma(-nu) * fixed_poch(1 + nu - n, n) * scipy.inf
+                    K[mask] = scipy.special.gamma(-nu) * fixed_poch(1 + nu - n, n) * np.inf
                 else:
                     K[mask] = scipy.special.gamma(nu) * scipy.special.gamma(n + 1.0) / (
                         2.0**(1.0 - nu + 2.0 * n) * fixed_poch(1.0 - nu, n) *
@@ -1501,12 +1502,12 @@ def yn2Kn2Der(nu, y, n=0, tol=5e-4, nterms=1, nu_step=0.001):
                 yn2Kn2Der(nu + nu_step, y[mask], n=n, tol=tol, nterms=nterms, nu_step=nu_step)
             )
         else:
-            for k in scipy.arange(n, n + nterms, dtype=float):
+            for k in np.arange(n, n + nterms, dtype=float):
                 K[mask] += (
                     scipy.special.gamma(nu) * fixed_poch(1.0 + k - n, n) * y[mask]**(k - n) / (
                         2.0**(1.0 - nu + 2 * k) * fixed_poch(1.0 - nu, k) * scipy.special.factorial(k))
                     )
-            for k in scipy.arange(0, nterms, dtype=float):
+            for k in np.arange(0, nterms, dtype=float):
                 K[mask] += (
                     scipy.special.gamma(-nu) * fixed_poch(1.0 + nu + k - n, n) *
                     y[mask]**(nu + k - n) / (
@@ -1558,13 +1559,13 @@ def incomplete_bell_poly(n, k, x):
         Incomplete Bell polynomial evaluated at the desired values.
     """
     if n == 0 and k == 0:
-        return scipy.ones(x.shape[0], dtype=float)
+        return np.ones(x.shape[0], dtype=float)
     elif k == 0 and n >= 1:
-        return scipy.zeros(x.shape[0], dtype=float)
+        return np.zeros(x.shape[0], dtype=float)
     elif n == 0 and k >= 1:
-        return scipy.zeros(x.shape[0], dtype=float)
+        return np.zeros(x.shape[0], dtype=float)
     else:
-        result = scipy.zeros(x.shape[0], dtype=float)
+        result = np.zeros(x.shape[0], dtype=float)
         for m in range(0, n - k + 1):
             result += x[:, m] * scipy.special.binom(n - 1, m) * incomplete_bell_poly(n - (m + 1), k - 1, x)
         return result
@@ -1593,13 +1594,13 @@ def generate_set_partition_strings(n):
     if n == 0:
         return []
     elif n == 1:
-        return [scipy.array([0])]
+        return [np.array([0])]
     
     partitions = []
     
     # Step 1: Initialize
-    a = scipy.zeros(n, dtype=int)
-    b = scipy.ones(n, dtype=int)
+    a = np.zeros(n, dtype=int)
+    b = np.ones(n, dtype=int)
     
     while True:
         # Step 2: Visit
@@ -1644,12 +1645,12 @@ def generate_set_partitions(set_):
         is therefore equal to the number of blocks. Each of the arrays in an
         inner list is hence a block.
     """
-    set_ = scipy.asarray(set_)
+    set_ = np.asarray(set_)
     strings = generate_set_partition_strings(len(set_))
     partitions = []
     for string in strings:
         blocks = []
-        for block_num in scipy.unique(string):
+        for block_num in np.unique(string):
             blocks.append(set_[string == block_num])
         partitions.append(blocks)
     
@@ -1690,7 +1691,7 @@ def unique_rows(arr, return_index=False, return_inverse=False):
         scipy.dtype((scipy.void, arr.dtype.itemsize * arr.shape[1]))
     )
     try:
-        out = scipy.unique(b, return_index=True, return_inverse=return_inverse)
+        out = np.unique(b, return_index=True, return_inverse=return_inverse)
         dum = out[0]
         idx = out[1]
         if return_inverse:
@@ -1698,19 +1699,19 @@ def unique_rows(arr, return_index=False, return_inverse=False):
     except TypeError:
         if return_inverse:
             raise RuntimeError(
-                "Error in scipy.unique on older versions of numpy prevents "
+                "Error in np.unique on older versions of numpy prevents "
                 "return_inverse from working!"
             )
         # Handle bug in numpy 1.6.2:
         rows = [_Row(row) for row in b]
         srt_idx = sorted(range(len(rows)), key=rows.__getitem__)
-        rows = scipy.asarray(rows)[srt_idx]
+        rows = np.asarray(rows)[srt_idx]
         row_cmp = [-1]
         for k in range(1, len(srt_idx)):
             row_cmp.append(rows[k-1].__cmp__(rows[k]))
-        row_cmp = scipy.asarray(row_cmp)
-        transition_idxs = scipy.where(row_cmp != 0)[0]
-        idx = scipy.asarray(srt_idx)[transition_idxs]
+        row_cmp = np.asarray(row_cmp)
+        transition_idxs = np.where(row_cmp != 0)[0]
+        idx = np.asarray(srt_idx)[transition_idxs]
     out = arr[idx]
     if return_index:
         out = (out, idx)
@@ -1723,7 +1724,7 @@ def unique_rows(arr, return_index=False, return_inverse=False):
 class _Row(object):
     """Helper class to compare rows of a matrix.
     
-    This is used to workaround the bug with scipy.unique in numpy 1.6.2.
+    This is used to workaround the bug with np.unique in numpy 1.6.2.
     
     Parameters
     ----------
@@ -1731,7 +1732,7 @@ class _Row(object):
         The row this object is to represent. Must be 1d. (Will be flattened.)
     """
     def __init__(self, row):
-        self.row = scipy.asarray(row).flatten()
+        self.row = np.asarray(row).flatten()
     
     def __cmp__(self, other):
         """Compare two rows.
@@ -1754,7 +1755,7 @@ class _Row(object):
             return 0
         else:
             # Get first non-equal element:
-            first_nonequal_idx = scipy.where(self.row != other.row)[0][0]
+            first_nonequal_idx = np.where(self.row != other.row)[0][0]
             if self.row[first_nonequal_idx] > other.row[first_nonequal_idx]:
                 return 1
             else:
@@ -1811,21 +1812,21 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
         if check_nan:
             mean = scipy.stats.nanmedian(vals, axis=axis)
             # TODO: HANDLE AXIS PROPERLY!
-            std = scipy.zeros(vals.shape[0], dtype=float)
+            std = np.zeros(vals.shape[0], dtype=float)
             for k in range(0, len(vals)):
                 ch = vals[k]
-                ok_idxs = ~scipy.isnan(ch)
+                ok_idxs = ~np.isnan(ch)
                 if ok_idxs.any():
                     std[k] = (scipy.stats.scoreatpercentile(ch[ok_idxs], 75) -
                               scipy.stats.scoreatpercentile(ch[ok_idxs], 25))
                 else:
                     # Leave a nan where there are no non-nan values:
-                    std[k] = scipy.nan
+                    std[k] = np.nan
             std /= IQR_TO_STD
         else:
-            mean = scipy.median(vals, axis=axis)
+            mean = np.median(vals, axis=axis)
             # TODO: HANDLE AXIS PROPERLY!
-            std = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75.0) -
+            std = np.asarray([scipy.stats.scoreatpercentile(ch, 75.0) -
                                  scipy.stats.scoreatpercentile(ch, 25.0)
                                  for ch in vals]) / IQR_TO_STD
     else:
@@ -1833,8 +1834,8 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
             mean = scipy.stats.nanmean(vals, axis=axis)
             std = scipy.stats.nanstd(vals, axis=axis)
         else:
-            mean = scipy.mean(vals, axis=axis)
-            std = scipy.std(vals, axis=axis)
+            mean = np.mean(vals, axis=axis)
+            std = np.std(vals, axis=axis)
     if plot_QQ:
         f = plt.figure()
         gs = mplgs.GridSpec(2, 2, height_ratios=[8, 1])
@@ -1852,7 +1853,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
             idx = slider.val
             title.set_text("{:s}, n={:d}".format(name, idx))
             
-            nan_idxs = scipy.isnan(vals[idx, :])
+            nan_idxs = np.isnan(vals[idx, :])
             if not nan_idxs.all():
                 osm, osr = scipy.stats.probplot(vals[idx, ~nan_idxs], dist='norm', plot=None, fit=False)
                 a_QQ.plot(osm, osr, 'bo', markersize=10)
@@ -1861,7 +1862,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
                 a_QQ.set_ylabel('quantiles of data')
                 
                 a_hist.hist(vals[idx, ~nan_idxs], bins=bins, normed=True)
-                locs = scipy.linspace(vals[idx, ~nan_idxs].min(), vals[idx, ~nan_idxs].max())
+                locs = np.linspace(vals[idx, ~nan_idxs].min(), vals[idx, ~nan_idxs].max())
                 a_hist.plot(locs, scipy.stats.norm.pdf(locs, loc=mean[idx], scale=std[idx]))
                 a_hist.set_title('Normalized histogram and reported PDF')
                 a_hist.set_xlabel('value')
@@ -1907,8 +1908,8 @@ def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=
     elif ax == 'gca':
         ax = plt.gca()
     
-    mean = scipy.asarray(mean, dtype=float).copy()
-    std = scipy.asarray(std, dtype=float).copy()
+    mean = np.asarray(mean, dtype=float).copy()
+    std = np.asarray(std, dtype=float).copy()
     
     # Truncate the data so matplotlib doesn't die:
     if lb is not None and ub is not None and expansion != 1.0:
@@ -1975,18 +1976,18 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
     
     if isinstance(sampler, emcee.EnsembleSampler):
         if chain_mask is None:
-            chain_mask = scipy.ones(sampler.chain.shape[0], dtype=bool)
+            chain_mask = np.ones(sampler.chain.shape[0], dtype=bool)
         flat_trace = sampler.chain[chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     elif isinstance(sampler, emcee.PTSampler):
         if chain_mask is None:
-            chain_mask = scipy.ones(sampler.nwalkers, dtype=bool)
+            chain_mask = np.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     elif isinstance(sampler, scipy.ndarray):
         if sampler.ndim == 4:
             if chain_mask is None:
-                chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
+                chain_mask = np.ones(sampler.shape[1], dtype=bool)
             flat_trace = sampler[temp_idx, chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
             if weights is not None:
@@ -1994,7 +1995,7 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
                 weights = weights.ravel()
         elif sampler.ndim == 3:
             if chain_mask is None:
-                chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
+                chain_mask = np.ones(sampler.shape[0], dtype=bool)
             flat_trace = sampler[chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
             if weights is not None:
@@ -2011,13 +2012,13 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
     
     cibdry = 100.0 * (1.0 - ci) / 2.0
     if weights is None:
-        mean = scipy.mean(flat_trace, axis=0)
+        mean = np.mean(flat_trace, axis=0)
         ci_l, ci_u = scipy.percentile(flat_trace, [cibdry, 100.0 - cibdry], axis=0)
     else:
         mean = weights.dot(flat_trace) / weights.sum()
-        ci_l = scipy.zeros(k)
-        ci_u = scipy.zeros(k)
-        p = scipy.asarray([cibdry, 100.0 - cibdry])
+        ci_l = np.zeros(k)
+        ci_u = np.zeros(k)
+        p = np.asarray([cibdry, 100.0 - cibdry])
         for i in range(0, k):
             srt = flat_trace[:, i].argsort()
             x = flat_trace[srt, i]
@@ -2167,7 +2168,7 @@ def plot_sampler(
     """
     masked_weights = None
     if points is not None:
-        points = scipy.atleast_2d(points)
+        points = np.atleast_2d(points)
         if covs is not None and len(covs) != len(points):
             raise ValueError(
                 "If covariance matrices are provided, len(covs) must equal len(points)!"
@@ -2256,23 +2257,23 @@ def plot_sampler(
                 elif j >= k and chain_ticklabel_fontsize is not None:
                     row[-1].tick_params(labelsize=chain_ticklabel_fontsize)
         axes.append(row)
-    axes = scipy.asarray(axes)
+    axes = np.asarray(axes)
     
     # Update axes with the data:
     if isinstance(sampler, emcee.EnsembleSampler):
         if chain_mask is None:
-            chain_mask = scipy.ones(sampler.chain.shape[0], dtype=bool)
+            chain_mask = np.ones(sampler.chain.shape[0], dtype=bool)
         flat_trace = sampler.chain[chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     elif isinstance(sampler, emcee.PTSampler):
         if chain_mask is None:
-            chain_mask = scipy.ones(sampler.nwalkers, dtype=bool)
+            chain_mask = np.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     elif isinstance(sampler, scipy.ndarray):
         if sampler.ndim == 4:
             if chain_mask is None:
-                chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
+                chain_mask = np.ones(sampler.shape[1], dtype=bool)
             flat_trace = sampler[temp_idx, chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
             if weights is not None:
@@ -2280,7 +2281,7 @@ def plot_sampler(
                 weights = weights.ravel()
         elif sampler.ndim == 3:
             if chain_mask is None:
-                chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
+                chain_mask = np.ones(sampler.shape[0], dtype=bool)
             flat_trace = sampler[chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
             if weights is not None:
@@ -2307,20 +2308,20 @@ def plot_sampler(
         if plot_hist:
             axes[i, i].hist(flat_trace[:, i], bins=bins, color=hist_color, weights=masked_weights, normed=True, histtype='stepfilled')
         if plot_samples:
-            axes[i, i].plot(flat_trace[:, i], scipy.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
+            axes[i, i].plot(flat_trace[:, i], np.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
         if points is not None:
             # axvline can only take a scalar x, so we have to loop:
             for p, c, cov in zip(points, colors, covs):
                 axes[i, i].axvline(x=p[i], linewidth=3, color=c)
                 if cov is not None:
                     xlim = axes[i, i].get_xlim()
-                    i_grid = scipy.linspace(xlim[0], xlim[1], 100)
+                    i_grid = np.linspace(xlim[0], xlim[1], 100)
                     axes[i, i].plot(
                         i_grid,
                         scipy.stats.norm.pdf(
                             i_grid,
                             loc=p[i],
-                            scale=scipy.sqrt(cov[i, i])
+                            scale=np.sqrt(cov[i, i])
                         ),
                         c,
                         linewidth=3.0
@@ -2348,12 +2349,12 @@ def plot_sampler(
                 for p, c, cov in zip(points, colors, covs):
                     axes[j, i].plot(p[i], p[j], 'o', color=c)
                     if cov is not None:
-                        Sigma = scipy.asarray([[cov[i, i], cov[i, j]], [cov[j, i], cov[j, j]]], dtype=float)
+                        Sigma = np.asarray([[cov[i, i], cov[i, j]], [cov[j, i], cov[j, j]]], dtype=float)
                         lam, v = scipy.linalg.eigh(Sigma)
-                        chi2 = [-scipy.log(1.0 - cival) * 2.0 for cival in ci]
-                        a = [2.0 * scipy.sqrt(chi2val * lam[-1]) for chi2val in chi2]
-                        b = [2.0 * scipy.sqrt(chi2val * lam[-2]) for chi2val in chi2]
-                        ang = scipy.arctan2(v[1, -1], v[0, -1])
+                        chi2 = [-np.log(1.0 - cival) * 2.0 for cival in ci]
+                        a = [2.0 * np.sqrt(chi2val * lam[-1]) for chi2val in chi2]
+                        b = [2.0 * np.sqrt(chi2val * lam[-2]) for chi2val in chi2]
+                        ang = np.arctan2(v[1, -1], v[0, -1])
                         for aval, bval in zip(a, b):
                             ell = mplp.Ellipse(
                                 [p[i], p[j]],
@@ -2402,7 +2403,7 @@ def plot_sampler(
                 # the right behavior if the weights are not roughly monotonic.
                 if cutoff_weight is not None:
                     a_wt.axhline(cutoff_weight * weights.max(), linestyle='-', color='r')
-                    wi, = scipy.where(weights >= cutoff_weight * weights.max())
+                    wi, = np.where(weights >= cutoff_weight * weights.max())
                     a_wt.axvline(wi[0], linestyle='-', color='r')
             if burn > 0:
                 axes[-1, i].axvline(burn, color='r', linewidth=3)
@@ -2514,18 +2515,18 @@ def plot_sampler_fingerprint(
     # Process the samples:
     if isinstance(sampler, emcee.EnsembleSampler):
         if chain_mask is None:
-            chain_mask = scipy.ones(sampler.chain.shape[0], dtype=bool)
+            chain_mask = np.ones(sampler.chain.shape[0], dtype=bool)
         flat_trace = sampler.chain[chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     elif isinstance(sampler, emcee.PTSampler):
         if chain_mask is None:
-            chain_mask = scipy.ones(sampler.nwalkers, dtype=bool)
+            chain_mask = np.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     elif isinstance(sampler, scipy.ndarray):
         if sampler.ndim == 4:
             if chain_mask is None:
-                chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
+                chain_mask = np.ones(sampler.shape[1], dtype=bool)
             flat_trace = sampler[temp_idx, chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
             if weights is not None:
@@ -2533,7 +2534,7 @@ def plot_sampler_fingerprint(
                 weights = weights.ravel()
         elif sampler.ndim == 3:
             if chain_mask is None:
-                chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
+                chain_mask = np.ones(sampler.shape[0], dtype=bool)
             flat_trace = sampler[chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
             if weights is not None:
@@ -2555,17 +2556,17 @@ def plot_sampler_fingerprint(
     if labels is None:
         labels = [''] * k
     
-    u = scipy.asarray([hyperprior.elementwise_cdf(p) for p in flat_trace], dtype=float).T
+    u = np.asarray([hyperprior.elementwise_cdf(p) for p in flat_trace], dtype=float).T
     if nbins is None:
         lq, uq = scipy.stats.scoreatpercentile(u, [25, 75], axis=1)
         h = 2.0 * (uq - lq) / u.shape[0]**(1.0 / 3.0)
-        n = scipy.asarray(scipy.ceil(1.0 / h), dtype=int)
+        n = np.asarray(np.ceil(1.0 / h), dtype=int)
     else:
         try:
             iter(nbins)
             n = nbins
         except TypeError:
-            n = nbins * scipy.ones(u.shape[0])
+            n = nbins * np.ones(u.shape[0])
     
     hist = [scipy.stats.histogram(uv, numbins=nv, defaultlimits=[0, 1], weights=weights) for uv, nv in zip(u, n)]
     max_ct = max([max(h.count) for h in hist])
@@ -2575,7 +2576,7 @@ def plot_sampler_fingerprint(
     a = f.add_subplot(1, 1, 1)
     for i, (h, pn) in enumerate(zip(hist, labels)):
         a.imshow(
-            scipy.atleast_2d(scipy.asarray(h.count[::-1], dtype=float)).T,
+            np.atleast_2d(np.asarray(h.count[::-1], dtype=float)).T,
             cmap='gray_r',
             interpolation='nearest',
             vmin=min_ct,
@@ -2590,12 +2591,12 @@ def plot_sampler_fingerprint(
                 a.plot([i, i + 1], [uv, uv], sample_color, alpha=0.1)
     
     if points is not None:
-        points = scipy.atleast_2d(scipy.asarray(points, dtype=float))
+        points = np.atleast_2d(np.asarray(points, dtype=float))
         u_points = [hyperprior.elementwise_cdf(p) for p in points]
         if point_color is None:
             c_cycle = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k'])
         else:
-            c_cycle = itertools.cycle(scipy.atleast_1d(point_color))
+            c_cycle = itertools.cycle(np.atleast_1d(point_color))
         for p in u_points:
             c = c_cycle.next()
             for i, uv in enumerate(p):
@@ -2603,7 +2604,7 @@ def plot_sampler_fingerprint(
     
     a.set_xlim(0, len(hist))
     a.set_ylim(0, 1)
-    a.set_xticks(0.5 + scipy.arange(0, len(hist), dtype=float))
+    a.set_xticks(0.5 + np.arange(0, len(hist), dtype=float))
     a.set_xticklabels(labels)
     if rot_x_labels:
         plt.setp(a.xaxis.get_majorticklabels(), rotation=90)
@@ -2666,18 +2667,18 @@ def plot_sampler_cov(
     # Process the samples:
     if isinstance(sampler, emcee.EnsembleSampler):
         if chain_mask is None:
-            chain_mask = scipy.ones(sampler.chain.shape[0], dtype=bool)
+            chain_mask = np.ones(sampler.chain.shape[0], dtype=bool)
         flat_trace = sampler.chain[chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     elif isinstance(sampler, emcee.PTSampler):
         if chain_mask is None:
-            chain_mask = scipy.ones(sampler.nwalkers, dtype=bool)
+            chain_mask = np.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     elif isinstance(sampler, scipy.ndarray):
         if sampler.ndim == 4:
             if chain_mask is None:
-                chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
+                chain_mask = np.ones(sampler.shape[1], dtype=bool)
             flat_trace = sampler[temp_idx, chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
             if weights is not None:
@@ -2685,7 +2686,7 @@ def plot_sampler_cov(
                 weights = weights.ravel()
         elif sampler.ndim == 3:
             if chain_mask is None:
-                chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
+                chain_mask = np.ones(sampler.shape[0], dtype=bool)
             flat_trace = sampler[chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
             if weights is not None:
@@ -2718,15 +2719,15 @@ def plot_sampler_cov(
     else:
         cov = scipy.cov(flat_trace, rowvar=0, aweights=weights)
         if method == 'corr':
-            stds = scipy.sqrt(scipy.diag(cov))
-            STD_1, STD_2 = scipy.meshgrid(stds, stds)
+            stds = np.sqrt(np.diag(cov))
+            STD_1, STD_2 = np.meshgrid(stds, stds)
             cov = cov / (STD_1 * STD_2)
     
     f_cov = plt.figure(figsize=figsize)
     a_cov = f_cov.add_subplot(1, 1, 1)
     a_cov.set_title(title)
     if method == 'cov':
-        vmax = scipy.absolute(cov).max()
+        vmax = np.absolute(cov).max()
     else:
         vmax = 1.0
     cax = a_cov.pcolor(cov, cmap='seismic', vmin=-1 * vmax, vmax=vmax)
@@ -2740,8 +2741,8 @@ def plot_sampler_cov(
     if xlabel_on_top:
         a_cov.xaxis.tick_top()
         a_cov.xaxis.set_label_position('top')
-    a_cov.set_xticks(0.5 + scipy.arange(0, flat_trace.shape[1], dtype=float))
-    a_cov.set_yticks(0.5 + scipy.arange(0, flat_trace.shape[1], dtype=float))
+    a_cov.set_xticks(0.5 + np.arange(0, flat_trace.shape[1], dtype=float))
+    a_cov.set_yticks(0.5 + np.arange(0, flat_trace.shape[1], dtype=float))
     a_cov.set_xticklabels(labels)
     if rot_x_labels:
         plt.setp(a_cov.xaxis.get_majorticklabels(), rotation=90)

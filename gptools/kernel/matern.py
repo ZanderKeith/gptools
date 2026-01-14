@@ -34,6 +34,7 @@ except ImportError:
     )
 
 import scipy
+import numpy as np
 import scipy.special
 try:
     import mpmath
@@ -76,13 +77,13 @@ def matern_function(Xi, Xj, *args):
     
     if isinstance(Xi, scipy.ndarray):
         if isinstance(Xi, scipy.matrix):
-            Xi = scipy.asarray(Xi, dtype=float)
-            Xj = scipy.asarray(Xj, dtype=float)
+            Xi = np.asarray(Xi, dtype=float)
+            Xj = np.asarray(Xj, dtype=float)
         
-        tau = scipy.asarray(Xi - Xj, dtype=float)
-        l_mat = scipy.tile(args[-num_dim:], (tau.shape[0], 1))
-        r2l2 = scipy.sum((tau / l_mat)**2, axis=1)
-        y = scipy.sqrt(2.0 * nu * r2l2)
+        tau = np.asarray(Xi - Xj, dtype=float)
+        l_mat = np.tile(args[-num_dim:], (tau.shape[0], 1))
+        r2l2 = np.sum((tau / l_mat)**2, axis=1)
+        y = np.sqrt(2.0 * nu * r2l2)
         k = 2.0**(1 - nu) / scipy.special.gamma(nu) * y**nu * scipy.special.kv(nu, y)
         k[r2l2 == 0] = 1
     else:
@@ -214,29 +215,29 @@ class MaternKernel1d(Kernel):
         if hyper_deriv is not None:
             raise NotImplementedError("Hyperparameter derivatives have not been implemented!")
         
-        n_combined = scipy.asarray(scipy.hstack((ni, nj)), dtype=int)
+        n_combined = np.asarray(np.hstack((ni, nj)), dtype=int)
         n_combined_unique = unique_rows(n_combined)
         
-        x_y = scipy.asarray(Xi, dtype=float).ravel() - scipy.asarray(Xj, dtype=float).ravel()
+        x_y = np.asarray(Xi, dtype=float).ravel() - np.asarray(Xj, dtype=float).ravel()
         
         zero_mask = x_y == 0
         
-        q = scipy.sqrt(2 * self.params[1] * x_y**2) / self.params[2]
+        q = np.sqrt(2 * self.params[1] * x_y**2) / self.params[2]
         
-        k = scipy.zeros(Xi.shape[0], dtype=float)
+        k = np.zeros(Xi.shape[0], dtype=float)
         for n_combined_state in n_combined_unique:
             idxs = (n_combined == n_combined_state).all(axis=1)
             # Derviative expressions evaluated with Mathematica, assuming l>0.
-            if (n_combined_state == scipy.asarray([0, 0])).all():
+            if (n_combined_state == np.asarray([0, 0])).all():
                 k[idxs] = q[idxs]**self.params[1] * scipy.special.kv(self.params[1], q[idxs])
                 k[idxs & zero_mask] = 2**(self.params[1] - 1) * scipy.special.gamma(self.params[1])
-            elif (n_combined_state == scipy.asarray([1, 0])).all():
+            elif (n_combined_state == np.asarray([1, 0])).all():
                 k[idxs] = -1.0 / x_y[idxs] * q[idxs]**(1 + self.params[1]) * scipy.special.kv(self.params[1] - 1, q[idxs])
                 k[idxs & zero_mask] = 0.0
-            elif (n_combined_state == scipy.asarray([0, 1])).all():
+            elif (n_combined_state == np.asarray([0, 1])).all():
                 k[idxs] = 1.0 / x_y[idxs] * q[idxs]**(1 + self.params[1]) * scipy.special.kv(self.params[1] - 1, q[idxs])
                 k[idxs & zero_mask] = 0.0
-            elif (n_combined_state == scipy.asarray([1, 1])).all():
+            elif (n_combined_state == np.asarray([1, 1])).all():
                 k[idxs] = 2.0 * self.params[1] / (self.params[2])**2 * q[idxs]**self.params[1] * (
                     -scipy.special.kv(self.params[1] - 2, q[idxs]) +
                     scipy.special.kv(self.params[1] - 1, q[idxs]) / q[idxs]
@@ -307,7 +308,7 @@ class MaternKernel(ChainRuleKernel):
             :math:`k(\tau)` (less the :math:`\sigma^2` prefactor).
         """
         y, r2l2 = self._compute_y(tau, return_r2l2=True)
-        k = 2.0**(1.0 - self.nu) / scipy.special.gamma(self.nu) * y**(self.nu / 2.0) * scipy.special.kv(self.nu, scipy.sqrt(y))
+        k = 2.0**(1.0 - self.nu) / scipy.special.gamma(self.nu) * y**(self.nu / 2.0) * scipy.special.kv(self.nu, np.sqrt(y))
         k[r2l2 == 0] = 1.0
         return k
     
@@ -352,7 +353,7 @@ class MaternKernel(ChainRuleKernel):
         y : scalar float
             Inner part of Matern kernel at the given `tau`.
         """
-        return self._compute_y(scipy.atleast_2d(scipy.asarray(args, dtype=float)))
+        return self._compute_y(np.atleast_2d(np.asarray(args, dtype=float)))
     
     def _compute_dk_dy(self, y, n):
         r"""Evaluate the derivative of the outer form of the Matern kernel.
@@ -407,7 +408,7 @@ class MaternKernel(ChainRuleKernel):
         elif (len(b) == 2) and (b[0] == b[1]):
             return 4.0 * self.nu / (self.params[2 + b[0]])**2.0
         else:
-            return scipy.zeros_like(r2l2)
+            return np.zeros_like(r2l2)
     
     def _compute_dk_dtau_on_partition(self, tau, p):
         """Evaluate the term inside the sum of Faa di Bruno's formula for the given partition.
@@ -435,12 +436,12 @@ class MaternKernel(ChainRuleKernel):
         # Keep track of how many times a given variable has a block of length 1:
         n1 = 0
         # Build the dy/dtau factor up iteratively:
-        dy_dtau_factor = scipy.ones_like(y)
+        dy_dtau_factor = np.ones_like(y)
         for b in p:
             # If the partial derivative is exactly zero there is no sense in
             # continuing the computation:
             if (len(b) > 2) or ((len(b) == 2) and (b[0] != b[1])):
-                return scipy.zeros_like(y)
+                return np.zeros_like(y)
             dy_dtau_factor *= self._compute_dy_dtau(tau, b, r2l2)
             # Count the number of blocks of length 1:
             if len(b) == 1:
@@ -452,7 +453,7 @@ class MaternKernel(ChainRuleKernel):
             tau_pow = 2 * (self.nu - n) + n1
             if tau_pow == 0:
                 # In this case the limit does not exist, so it is set to NaN:
-                dk_dy[mask] = scipy.nan
+                dk_dy[mask] = np.nan
             elif tau_pow > 0:
                 dk_dy[mask] = 0.0
                 
@@ -542,14 +543,14 @@ class Matern52Kernel(Kernel):
         """
         if hyper_deriv is not None:
             raise NotImplementedError("Hyperparameter derivatives have not been implemented!")
-        if scipy.any(scipy.sum(ni, axis=1) > 1) or scipy.any(scipy.sum(nj, axis=1) > 1):
+        if scipy.any(np.sum(ni, axis=1) > 1) or scipy.any(np.sum(nj, axis=1) > 1):
             raise ValueError("Matern52Kernel only supports 0th and 1st order derivatives")
 
-        Xi = scipy.asarray(Xi, dtype=scipy.float64)
-        Xj = scipy.asarray(Xj, dtype=scipy.float64)
-        ni = scipy.array(ni, dtype=scipy.int32)
-        nj = scipy.array(nj, dtype=scipy.int32)
-        var = scipy.square(self.params[-self.num_dim:])
+        Xi = np.asarray(Xi, dtype=np.float6464)
+        Xj = np.asarray(Xj, dtype=np.float6464)
+        ni = np.array(ni, dtype=np.int_32)
+        nj = np.array(nj, dtype=np.int_32)
+        var = np.square(self.params[-self.num_dim:])
 
         value = _matern52(Xi, Xj, ni, nj, var)
         return self.params[0]**2 * value

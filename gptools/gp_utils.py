@@ -40,6 +40,7 @@ except ImportError:
     )
 import itertools
 import scipy
+import numpy as np
 import copy
 
 def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
@@ -70,26 +71,26 @@ def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
     
     present_free_params = gp.free_params
     
-    bounds = scipy.atleast_2d(scipy.asarray(bounds, dtype=float))
+    bounds = np.atleast_2d(np.asarray(bounds, dtype=float))
     if bounds.shape[1] != 2:
         raise ValueError("Argument bounds must have shape (n, 2)!")
     # If bounds is a single tuple, repeat it for each free parameter:
     if bounds.shape[0] == 1:
-        bounds = scipy.tile(bounds, (len(present_free_params), 1))
+        bounds = np.tile(bounds, (len(present_free_params), 1))
     # If num_pts is a single value, use it for all of the parameters:
     try:
         iter(num_pts)
     except TypeError:
-        num_pts = num_pts * scipy.ones(bounds.shape[0], dtype=int)
+        num_pts = num_pts * np.ones(bounds.shape[0], dtype=int)
     else:
-        num_pts = scipy.asarray(num_pts, dtype=int)
+        num_pts = np.asarray(num_pts, dtype=int)
         if len(num_pts) != len(present_free_params):
             raise ValueError("Length of num_pts must match the number of free parameters of kernel!")
     
     # Form arrays to evaluate parameters over:
     param_vals = []
     for k in range(0, len(present_free_params)):
-        param_vals.append(scipy.linspace(bounds[k, 0], bounds[k, 1], num_pts[k]))
+        param_vals.append(np.linspace(bounds[k, 0], bounds[k, 1], num_pts[k]))
     
     pv_cases = list()
     gp_cases = list()
@@ -105,7 +106,7 @@ def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
     
     pool =  multiprocessing.Pool(processes=num_proc)    
     try:
-        vals = scipy.asarray(
+        vals = np.asarray(
             pool.map(
                 _compute_ll_matrix_wrapper,
                 zip(gp_cases, pv_cases, num_pts_cases)

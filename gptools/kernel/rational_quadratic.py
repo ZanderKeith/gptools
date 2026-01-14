@@ -24,6 +24,7 @@ from .core import ChainRuleKernel
 from ..utils import fixed_poch
 
 import scipy
+import numpy as np
 import scipy.special
 import scipy.misc
 
@@ -161,4 +162,4 @@ class RationalQuadraticKernel(ChainRuleKernel):
         elif len(b) == 2 and b[0] == b[1]:
             return 1.0 / (self.params[1] * (self.params[2 + b[0]])**2.0)
         else:
-            return scipy.zeros_like(r2l2)
+            return np.zeros_like(r2l2)

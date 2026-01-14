@@ -1,6 +1,7 @@
 from __future__ import division
 
 import scipy
+import numpy as np
 
 def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
     """Evaluate a B-, M- or I-spline with the specified internal knots, order and coefficients.
@@ -49,20 +50,20 @@ def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
     `y` or (`y`, `cov_y`): The values (and possibly uncertainties) of the spline
     at the specified locations.
     """
-    C = scipy.asarray(C, dtype=float)
-    t_int = scipy.asarray(t_int, dtype=float)
-    if (t_int != scipy.sort(t_int)).any():
+    C = np.asarray(C, dtype=float)
+    t_int = np.asarray(t_int, dtype=float)
+    if (t_int != np.sort(t_int)).any():
         raise ValueError("Knots must be in increasing order!")
-    # if len(scipy.unique(t_int)) != len(t_int):
+    # if len(np.unique(t_int)) != len(t_int):
     #     raise ValueError("Knots must be unique!")
     if n > deg:
-        return scipy.zeros_like(x, dtype=float)
+        return np.zeros_like(x, dtype=float)
     if I_spline:
         # I_{i,k} = int_L^x M_{i,k}(u)du, so just take the derivative of the
         # underlying M-spline. Discarding the first coefficient dumps the "DC
         # offset" term.
         if cov_C is not None:
-            cov_C = scipy.asarray(cov_C)
+            cov_C = np.asarray(cov_C)
             if cov_C.ndim == 1:
                 cov_C = cov_C[1:]
             elif cov_C.ndim == 2:
@@ -75,7 +76,7 @@ def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
         M_spline = True
     if n > 0:
         if M_spline:
-            t = scipy.concatenate(([t_int[0]] * deg, t_int, [t_int[-1]] * deg))
+            t = np.concatenate(([t_int[0]] * deg, t_int, [t_int[-1]] * deg))
             C = (deg + 1.0) * (
                 C[1:] / (t[deg + 2:len(t_int) + 2 * deg] - t[1:len(t_int) + deg - 1]) -
                 C[:-1] / (t[deg + 1:len(t_int) + 2 * deg - 1] - t[:len(t_int) + deg - 2])
@@ -91,10 +92,10 @@ def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
         raise ValueError("Length of C must be equal to M + deg - 1!")
     
     # Append the external knots directly at the boundary:
-    t = scipy.concatenate(([t_int[0]] * deg, t_int, [t_int[-1]] * deg))
+    t = np.concatenate(([t_int[0]] * deg, t_int, [t_int[-1]] * deg))
     
     # Compute the different orders:
-    B = scipy.zeros((deg + 1, len(t) - 1, len(x)))
+    B = np.zeros((deg + 1, len(t) - 1, len(x)))
     
     # NOTE: The first dimension is indexed by deg, and is zero-indexed.
     
@@ -128,7 +129,7 @@ def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
     
     # Now compute the I-splines, if needed:
     if I_spline:
-        I = scipy.zeros_like(B)
+        I = np.zeros_like(B)
         for i in range(0, len(C)):
             for m in range(i, len(C)):
                 I[:, i] += (t[m + deg + 1] - t[m]) * B[:, m] / (deg + 1.0)
@@ -136,10 +137,10 @@ def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
     
     y = B.dot(C)
     if cov_C is not None:
-        cov_C = scipy.asarray(cov_C)
+        cov_C = np.asarray(cov_C)
         # If there are no covariances, promote cov_C to a diagonal matrix
         if cov_C.ndim == 1:
-            cov_C = scipy.diag(cov_C)
+            cov_C = np.diag(cov_C)
         cov_y = B.dot(cov_C).dot(B.T)
         return (y, cov_y)
     else:

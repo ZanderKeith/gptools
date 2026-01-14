@@ -26,6 +26,7 @@ from ..utils import unique_rows, generate_set_partitions, UniformJointPrior, \
                     IndependentJointPrior, powerset, MaskedBounds
 from ..error_handling import GPArgumentError
 
+import numpy as np
 import scipy
 import scipy.special
 import scipy.stats
@@ -136,7 +137,7 @@ class Kernel(object):
     def __init__(self, num_dim=1, num_params=0, initial_params=None,
                  fixed_params=None, param_bounds=None, param_names=None,
                  enforce_bounds=False, hyperprior=None):
-        if num_params < 0 or not isinstance(num_params, (int, scipy.integer)):
+        if num_params < 0 or not isinstance(num_params, (int, np.integer)):
             raise ValueError("num_params must be an integer >= 0!")
         self.num_params = num_params
         if param_names is None:
@@ -145,9 +146,9 @@ class Kernel(object):
             raise ValueError(
                 "param_names must be a list of length num_params!"
             )
-        self.param_names = scipy.asarray(param_names, dtype=str)
+        self.param_names = np.asarray(param_names, dtype=str)
 
-        if num_dim < 1 or not isinstance(num_dim, (int, scipy.integer)):
+        if num_dim < 1 or not isinstance(num_dim, (int, np.integer)):
             raise ValueError("num_dim must be an integer > 0!")
         self.num_dim = num_dim
 
@@ -160,8 +161,8 @@ class Kernel(object):
                 raise GPArgumentError(
                     "Must pass explicit parameter values if fixing parameters!"
                 )
-            initial_params = scipy.ones(num_params, dtype=scipy.double)
-            fixed_params = scipy.zeros(num_params, dtype=scipy.double)
+            initial_params = np.ones(num_params, dtype=np.float64)
+            fixed_params = np.zeros(num_params, dtype=np.float64)
         else:
             if len(initial_params) != num_params:
                 raise ValueError(
@@ -169,13 +170,13 @@ class Kernel(object):
                 )
             # Handle default case of fixed_params: no fixed parameters.
             if fixed_params is None:
-                fixed_params = scipy.zeros(num_params, dtype=scipy.double)
+                fixed_params = np.zeros(num_params, dtype=np.float64)
             else:
                 if len(fixed_params) != num_params:
                     raise ValueError(
                         "Length of fixed_params must be equal to num_params!"
                     )
-        self.fixed_params = scipy.asarray(fixed_params, dtype=scipy.bool_)
+        self.fixed_params = np.asarray(fixed_params, dtype=np.bool_)
 
         # Handle default case for parameter bounds -- set them all to (0, 1e16)
         if param_bounds is None and hyperprior is None:
@@ -206,7 +207,7 @@ class Kernel(object):
             except TypeError:
                 pass
 
-        self.params = scipy.asarray(initial_params, dtype=scipy.double)
+        self.params = np.asarray(initial_params, dtype=np.float64)
         self.hyperprior = hyperprior
 
     @property
@@ -265,7 +266,7 @@ class Kernel(object):
             New parameter values, ordered as dictated by the docstring for the
             class.
         """
-        new_params = scipy.asarray(new_params, dtype=scipy.double)
+        new_params = np.asarray(new_params, dtype=np.float64)
 
         if len(new_params) == len(self.free_params):
             if self.enforce_bounds:
@@ -297,7 +298,7 @@ class Kernel(object):
         """Returns the indices of the free parameters in the main arrays of
         parameters, etc.
         """
-        return scipy.arange(0, self.num_params)[~self.fixed_params]
+        return np.arange(0, self.num_params)[~self.fixed_params]
 
     @property
     def free_params(self):
@@ -312,8 +313,8 @@ class Kernel(object):
 
     @free_params.setter
     def free_params(self, value):
-        self.params[self.free_param_idxs] = scipy.asarray(
-            value, dtype=scipy.double
+        self.params[self.free_param_idxs] = np.asarray(
+            value, dtype=np.float64
         )
 
     @property
@@ -348,7 +349,7 @@ class Kernel(object):
     @free_param_names.setter
     def free_param_names(self, value):
         # Cast to array in case it hasn't been done already:
-        self.param_names = scipy.asarray(self.param_names, dtype=str)
+        self.param_names = np.asarray(self.param_names, dtype=str)
         self.param_names[~self.fixed_params] = value
 
     def __add__(self, other):
@@ -411,10 +412,10 @@ class Kernel(object):
             The (`D`,) array of length scales repeated for each of the `M`
             inputs. Only returned if `return_l` is True.
         """
-        l_mat = scipy.tile(self.params[-self.num_dim:], (tau.shape[0], 1))
+        l_mat = np.tile(self.params[-self.num_dim:], (tau.shape[0], 1))
         tau_over_l = tau / l_mat
         tau_over_l[(tau == 0) & (l_mat == 0)] = 0.0
-        r2l2 = scipy.sum((tau_over_l)**2, axis=1)
+        r2l2 = np.sum((tau_over_l)**2, axis=1)
         if return_l:
             return (r2l2, l_mat)
         else:
@@ -452,8 +453,8 @@ class BinaryKernel(Kernel):
         super(BinaryKernel, self).__init__(
             num_dim=k1.num_dim,
             num_params=k1.num_params + k2.num_params,
-            initial_params=scipy.concatenate((k1.params, k2.params)),
-            fixed_params=scipy.concatenate((k1.fixed_params, k2.fixed_params)),
+            initial_params=np.concatenate((k1.params, k2.params)),
+            fixed_params=np.concatenate((k1.fixed_params, k2.fixed_params)),
             param_names=list(k1.param_names) + list(k2.param_names),
             hyperprior=k1.hyperprior * k2.hyperprior,
             enforce_bounds=self._enforce_bounds
@@ -476,7 +477,7 @@ class BinaryKernel(Kernel):
 
     @property
     def fixed_params(self):
-        return scipy.concatenate((self.k1.fixed_params, self.k2.fixed_params))
+        return np.concatenate((self.k1.fixed_params, self.k2.fixed_params))
 
     @fixed_params.setter
     def fixed_params(self, v):
@@ -492,7 +493,7 @@ class BinaryKernel(Kernel):
         free_param_bounds : :py:class:`Array`
             Array of the bounds of the free parameters, in order.
         """
-        return scipy.concatenate(
+        return np.concatenate(
             (self.k1.free_param_bounds, self.k2.free_param_bounds)
         )
 
@@ -505,13 +506,13 @@ class BinaryKernel(Kernel):
         free_param_names : :py:class:`Array`
             Array of the names of the free parameters, in order.
         """
-        return scipy.concatenate(
+        return np.concatenate(
             (self.k1.free_param_names, self.k2.free_param_names)
         )
 
     @property
     def params(self):
-        return scipy.concatenate((self.k1.params, self.k2.params))
+        return np.concatenate((self.k1.params, self.k2.params))
 
     @params.setter
     def params(self, v):
@@ -532,7 +533,7 @@ class BinaryKernel(Kernel):
             If the length of `new_params` is not consistent with
             :py:attr:`self.params`.
         """
-        new_params = scipy.asarray(new_params, dtype=scipy.double)
+        new_params = np.asarray(new_params, dtype=np.float64)
 
         if len(new_params) == len(self.free_params):
             num_free_k1 = sum(~self.k1.fixed_params)
@@ -618,10 +619,10 @@ class ProductKernel(BinaryKernel):
         if kwargs.get('hyper_deriv', None) is not None:
             raise NotImplementedError("hyper_deriv keyword not yet supported!")
         # Need to process ni, nj to handle the product rule properly.
-        nij = scipy.hstack((ni, nj))
+        nij = np.hstack((ni, nj))
         nij_unique = unique_rows(nij)
 
-        result = scipy.zeros(Xi.shape[0])
+        result = np.zeros(Xi.shape[0])
 
         for row in nij_unique:
             # deriv_pattern is the pattern of partial derivatives, where the
@@ -640,7 +641,7 @@ class ProductKernel(BinaryKernel):
             for s in S:
                 # nij_1 is the combined array of derivative orders for function
                 # 1:
-                nij_1 = scipy.zeros((idxs.sum(), 2 * self.num_dim))
+                nij_1 = np.zeros((idxs.sum(), 2 * self.num_dim))
                 # sC is the complement of s with respect to S:
                 sC = list(deriv_pattern)
                 for i in s:
@@ -648,7 +649,7 @@ class ProductKernel(BinaryKernel):
                     sC.remove(i)
                 # nij_2 is the combined array of derivative orders for function
                 # 2:
-                nij_2 = scipy.zeros((idxs.sum(), 2 * self.num_dim))
+                nij_2 = np.zeros((idxs.sum(), 2 * self.num_dim))
                 for i in sC:
                     nij_2[:, i] += 1
                 result[idxs] += (
@@ -725,18 +726,18 @@ class ChainRuleKernel(Kernel):
                 "Hyperparameter derivatives have not been implemented!"
             )
 
-        tau = scipy.asarray(Xi - Xj, dtype=scipy.double)
+        tau = np.asarray(Xi - Xj, dtype=np.float64)
 
         # Account for derivatives:
         # Get total number of differentiations:
-        n_tot_j = scipy.asarray(
-            scipy.sum(nj, axis=1), dtype=scipy.intc
+        n_tot_j = np.asarray(
+            np.sum(nj, axis=1), dtype=np.intc
         ).flatten()
-        n_combined = scipy.asarray(ni + nj, dtype=scipy.intc)
+        n_combined = np.asarray(ni + nj, dtype=np.intc)
         n_combined_unique = unique_rows(n_combined)
 
         # Evaluate the kernel:
-        k = scipy.zeros(Xi.shape[0], dtype=scipy.double)
+        k = np.zeros(Xi.shape[0], dtype=np.float64)
         # First compute dk/dtau
         for n_combined_state in n_combined_unique:
             idxs = (n_combined == n_combined_state).all(axis=1)
@@ -774,7 +775,7 @@ class ChainRuleKernel(Kernel):
         deriv_pattern = []
         for idx in range(0, len(n)):
             deriv_pattern.extend(n[idx] * [idx])
-        deriv_pattern = scipy.asarray(deriv_pattern, dtype=scipy.intc)
+        deriv_pattern = np.asarray(deriv_pattern, dtype=np.intc)
         # Handle non-derivative case separately for efficiency:
         if len(deriv_pattern) == 0:
             return self._compute_k(tau)
@@ -783,7 +784,7 @@ class ChainRuleKernel(Kernel):
             deriv_partitions = generate_set_partitions(deriv_pattern)
             # Compute the requested derivative using the multivariate Faa di
             # Bruno's equation:
-            dk_dtau = scipy.zeros(tau.shape[0])
+            dk_dtau = np.zeros(tau.shape[0])
             # Loop over the partitions:
             for partition in deriv_partitions:
                 dk_dtau += self._compute_dk_dtau_on_partition(tau, partition)
@@ -915,31 +916,31 @@ class ArbitraryKernel(Kernel):
             raise NotImplementedError(
                 "Hyperparameter derivatives have not been implemented!"
             )
-        n_cat = scipy.asarray(
-            scipy.concatenate((ni, nj), axis=1), dtype=scipy.intc
+        n_cat = np.asarray(
+            np.concatenate((ni, nj), axis=1), dtype=np.intc
         )
-        X_cat = scipy.asarray(
-            scipy.concatenate((Xi, Xj), axis=1), dtype=scipy.double
+        X_cat = np.asarray(
+            np.concatenate((Xi, Xj), axis=1), dtype=np.float64
         )
         n_cat_unique = unique_rows(n_cat)
-        k = scipy.zeros(Xi.shape[0], dtype=scipy.double)
+        k = np.zeros(Xi.shape[0], dtype=np.float64)
         # Loop over unique derivative patterns:
         if self.num_proc > 1:
             pool = multiprocessing.Pool(processes=self.num_proc)
         for n_cat_state in n_cat_unique:
-            idxs = scipy.where(
-                scipy.asarray((n_cat == n_cat_state).all(axis=1)).squeeze()
+            idxs = np.where(
+                np.asarray((n_cat == n_cat_state).all(axis=1)).squeeze()
             )[0]
             if (n_cat_state == 0).all():
                 k[idxs] = self.cov_func(Xi[idxs, :], Xj[idxs, :], *self.params)
             else:
                 if self.num_proc > 1 and len(idxs) > 1:
-                    k[idxs] = scipy.asarray(
+                    k[idxs] = np.asarray(
                         pool.map(
                             _ArbitraryKernelEval(self, n_cat_state),
                             X_cat[idxs, :]
                         ),
-                        dtype=scipy.double
+                        dtype=np.float64
                     )
                 else:
                     for idx in idxs:
@@ -1128,10 +1129,10 @@ class MaskedKernel(Kernel):
         # Need to see if there are any derivatives of the masked variables:
         good_idxs = (ni[:, self.maskC] == 0).all(axis=1) & \
             (nj[:, self.maskC] == 0).all(axis=1)
-        result = scipy.zeros(Xi.shape[0])
+        result = np.zeros(Xi.shape[0])
         # Need to do the indexing kinda funny to keep the shape right:
         if good_idxs.any():
-            scale_tile = scipy.tile(self.scale, (good_idxs.sum(), 1))
+            scale_tile = np.tile(self.scale, (good_idxs.sum(), 1))
             result[good_idxs] = self.base(
                 Xi[good_idxs][:, self.mask] *
                 scale_tile[:, :self.base.num_dim],
@@ -1141,7 +1142,7 @@ class MaskedKernel(Kernel):
                 nj[good_idxs][:, self.mask],
                 **kwargs
             ) * (
-                scale_tile ** scipy.hstack(
+                scale_tile ** np.hstack(
                     (ni[good_idxs][:, self.mask], nj[good_idxs][:, self.mask])
                 )
             ).prod(axis=1)
