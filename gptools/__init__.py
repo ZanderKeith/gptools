@@ -22,9 +22,13 @@ from __future__ import division
 
 __version__ = '0.2.4_dev'
 
+from importlib.resources import files
+
 from .gaussian_process import *
 from .error_handling import *
 from .kernel import *
 from .utils import *
 from .gp_utils import *
 from .mean import *
+
+PACKAGE_ROOT = files('gptools')
