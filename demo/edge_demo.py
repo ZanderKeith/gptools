@@ -53,7 +53,7 @@ gp = gptools.GaussianProcess(k_gibbs)
 gp.add_data(core_data['X'], core_data['y'], err_y=core_data['err_y'])
 gp.add_data(edge_data['X'], edge_data['y'], err_y=edge_data['err_y'])
 gp.add_data(0, 0, n=1)
-gp.optimize_hyperparameters(verbose=True)
+gp.optimize_hyperparameters(verbose=True, random_starts=0)
 y_star, std_y_star = gp.predict(X_star)
 gptools.univariate_envelope_plot(
     X_star,
