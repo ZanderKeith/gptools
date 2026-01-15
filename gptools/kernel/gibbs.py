@@ -456,14 +456,19 @@ def tanh_warp(x, n, l1, l2, lw, x0):
     NotImplementedError
         If `n` > 1.
     """
-    if n == 0:
-        return (l1 + l2) / 2.0 - (l1 - l2) / 2.0 * np.tanh((x - x0) / lw)
-    elif n == 1:
-        return -(l1 - l2) / (2.0 * lw) * (np.cosh((x - x0) / lw))**(-2.0)
-    else:
-        raise NotImplementedError(
-            "Only derivatives up to order 1 are supported!"
-        )
+    # Suppress warnings that occur during optimization when lw is very small
+    # The overflow/divide-by-zero warnings are handled correctly:
+    # - cosh(large_value) overflows but cosh^(-2) correctly evaluates to 0
+    # - tanh saturates at ±1 for large arguments
+    with np.errstate(over='ignore', divide='ignore', invalid='ignore'):
+        if n == 0:
+            return (l1 + l2) / 2.0 - (l1 - l2) / 2.0 * np.tanh((x - x0) / lw)
+        elif n == 1:
+            return -(l1 - l2) / (2.0 * lw) * (np.cosh((x - x0) / lw))**(-2.0)
+        else:
+            raise NotImplementedError(
+                "Only derivatives up to order 1 are supported!"
+            )
 
 
 class GibbsKernel1dTanh(GibbsKernel1d):
@@ -803,7 +808,7 @@ class GibbsKernel1dQuinticBucket(GibbsKernel1d):
 
 
 def exp_gauss_warp(X, n, l0, *msb):
-    """Length scale function which is an exponential of a sum of Gaussians.
+    r"""Length scale function which is an exponential of a sum of Gaussians.
 
     The centers and widths of the Gaussians are free parameters.
 
@@ -994,7 +999,7 @@ class GibbsKernel1dBSpline(GibbsKernel1d):
 
 
 class GPWarp(object):
-    """Length scale function which is a Gaussian process.
+    r"""Length scale function which is a Gaussian process.
 
     Parameters
     ----------
