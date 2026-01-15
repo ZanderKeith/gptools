@@ -75,8 +75,8 @@ def matern_function(Xi, Xj, *args):
     num_dim = len(args) - 2
     nu = args[1]
     
-    if isinstance(Xi, scipy.ndarray):
-        if isinstance(Xi, scipy.matrix):
+    if isinstance(Xi, np.ndarray):
+        if isinstance(Xi, np.matrix):
             Xi = np.asarray(Xi, dtype=float)
             Xj = np.asarray(Xj, dtype=float)
         

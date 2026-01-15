@@ -64,8 +64,8 @@ def tanh_warp_arb(X, l1, l2, lw, x0):
     l : :py:class:`Array`, (`M`,) or scalar float
         The value of the length scale at the specified point.
     """
-    if isinstance(X, scipy.ndarray):
-        if isinstance(X, scipy.matrix):
+    if isinstance(X, np.ndarray):
+        if isinstance(X, np.matrix):
             X = np.asarray(X, dtype=float)
         return 0.5 * ((l1 + l2) - (l1 - l2) * np.tanh((X - x0) / lw))
     else:
@@ -97,8 +97,8 @@ def gauss_warp_arb(X, l1, l2, lw, x0):
     l : :py:class:`Array`, (`M`,) or scalar float
         The value of the length scale at the specified point.
     """
-    if isinstance(X, scipy.ndarray):
-        if isinstance(X, scipy.matrix):
+    if isinstance(X, np.ndarray):
+        if isinstance(X, np.matrix):
             X = np.asarray(X, dtype=float)
         return l1 - (l1 - l2) * np.exp(-4.0 * np.log(2.0) * (X - x0)**2.0 / (lw**2.0))
     else:
@@ -145,8 +145,8 @@ class GibbsFunction1dArb(object):
         """
         li = self.warp_function(Xi, l1, l2, lw, x0)
         lj = self.warp_function(Xj, l1, l2, lw, x0)
-        if isinstance(Xi, scipy.ndarray):
-            if isinstance(Xi, scipy.matrix):
+        if isinstance(Xi, np.ndarray):
+            if isinstance(Xi, np.matrix):
                 Xi = np.asarray(Xi, dtype=float)
                 Xj = np.asarray(Xj, dtype=float)
             return sigmaf**2.0 * (

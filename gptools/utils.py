@@ -1687,8 +1687,8 @@ def unique_rows(arr, return_index=False, return_inverse=False):
     unique : :py:class:`Array`, (`p`, `n`) where `p` <= `m`
         The array `arr` with duplicate rows removed.
     """
-    b = scipy.ascontiguousarray(arr).view(
-        scipy.dtype((scipy.void, arr.dtype.itemsize * arr.shape[1]))
+    b = np.ascontiguousarray(arr).view(
+        np.dtype((np.void, arr.dtype.itemsize * arr.shape[1]))
     )
     try:
         out = np.unique(b, return_index=True, return_inverse=return_inverse)
@@ -1984,7 +1984,7 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
             chain_mask = np.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
-    elif isinstance(sampler, scipy.ndarray):
+    elif isinstance(sampler, np.ndarray):
         if sampler.ndim == 4:
             if chain_mask is None:
                 chain_mask = np.ones(sampler.shape[1], dtype=bool)
@@ -2270,7 +2270,7 @@ def plot_sampler(
             chain_mask = np.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
-    elif isinstance(sampler, scipy.ndarray):
+    elif isinstance(sampler, np.ndarray):
         if sampler.ndim == 4:
             if chain_mask is None:
                 chain_mask = np.ones(sampler.shape[1], dtype=bool)
@@ -2522,7 +2522,7 @@ def plot_sampler_fingerprint(
             chain_mask = np.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
-    elif isinstance(sampler, scipy.ndarray):
+    elif isinstance(sampler, np.ndarray):
         if sampler.ndim == 4:
             if chain_mask is None:
                 chain_mask = np.ones(sampler.shape[1], dtype=bool)
@@ -2674,7 +2674,7 @@ def plot_sampler_cov(
             chain_mask = np.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
-    elif isinstance(sampler, scipy.ndarray):
+    elif isinstance(sampler, np.ndarray):
         if sampler.ndim == 4:
             if chain_mask is None:
                 chain_mask = np.ones(sampler.shape[1], dtype=bool)
