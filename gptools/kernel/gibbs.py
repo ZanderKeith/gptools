@@ -321,105 +321,109 @@ class GibbsKernel1d(Kernel):
             raise NotImplementedError(
                 "Hyperparameter derivatives have not been implemented!"
             )
+        
+        # Suppress overflow warnings from exp and division
+        # TODO(ZanderKeith): Port this to Jax to get the derivatives
+        with np.errstate(over='ignore', divide='ignore', invalid='ignore'):
 
-        n_combined = np.asarray(np.hstack((ni, nj)), dtype=int)
-        n_combined_unique = unique_rows(n_combined)
+            n_combined = np.asarray(np.hstack((ni, nj)), dtype=int)
+            n_combined_unique = unique_rows(n_combined)
 
-        x = np.asarray(Xi, dtype=float)[:, 0]
-        y = np.asarray(Xj, dtype=float)[:, 0]
+            x = np.asarray(Xi, dtype=float)[:, 0]
+            y = np.asarray(Xj, dtype=float)[:, 0]
 
-        lx = self.l_func(x, 0, *self.params[1:])
-        ly = self.l_func(y, 0, *self.params[1:])
-        lx1 = self.l_func(x, 1, *self.params[1:])
-        ly1 = self.l_func(y, 1, *self.params[1:])
+            lx = self.l_func(x, 0, *self.params[1:])
+            ly = self.l_func(y, 0, *self.params[1:])
+            lx1 = self.l_func(x, 1, *self.params[1:])
+            ly1 = self.l_func(y, 1, *self.params[1:])
 
-        x_y = x - y
-        lx2ly2 = lx**2 + ly**2
+            x_y = x - y
+            lx2ly2 = lx**2 + ly**2
 
-        k = np.zeros(Xi.shape[0], dtype=float)
-        for n_combined_state in n_combined_unique:
-            idxs = (n_combined == n_combined_state).all(axis=1)
-            # Derviative expressions evaluated with Mathematica, assuming l>0.
-            if (n_combined_state == np.asarray([0, 0])).all():
-                k[idxs] = (
-                    np.sqrt(2.0 * lx[idxs] * ly[idxs] / lx2ly2[idxs]) *
-                    np.exp(-x_y[idxs]**2 / lx2ly2[idxs])
-                )
-            elif (n_combined_state == np.asarray([1, 0])).all():
-                k[idxs] = (
-                    (
-                        np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
-                        ly[idxs] * (
-                            -4 * x_y[idxs] * lx[idxs]**3 -
-                            4 * x_y[idxs] * lx[idxs] * ly[idxs]**2 +
-                            4 * x_y[idxs]**2 * lx[idxs]**2 * lx1[idxs] -
-                            lx[idxs]**4 * lx1[idxs] +
-                            ly[idxs]**4 * lx1[idxs]
-                        )
-                    ) / (np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
-                )
-            elif (n_combined_state == np.asarray([0, 1])).all():
-                k[idxs] = (
-                    (
-                        np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
-                        lx[idxs] * (
-                            4 * x_y[idxs] * ly[idxs]**3 +
-                            4 * x_y[idxs] * ly[idxs] * lx[idxs]**2 +
-                            4 * x_y[idxs]**2 * ly[idxs]**2 * ly1[idxs] -
-                            ly[idxs]**4 * ly1[idxs] +
-                            lx[idxs]**4 * ly1[idxs]
-                        )
-                    ) / (np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
-                )
-            elif (n_combined_state == np.asarray([1, 1])).all():
-                k[idxs] = (
-                    (
-                        np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+            k = np.zeros(Xi.shape[0], dtype=float)
+            for n_combined_state in n_combined_unique:
+                idxs = (n_combined == n_combined_state).all(axis=1)
+                # Derviative expressions evaluated with Mathematica, assuming l>0.
+                if (n_combined_state == np.asarray([0, 0])).all():
+                    k[idxs] = (
+                        np.sqrt(2.0 * lx[idxs] * ly[idxs] / lx2ly2[idxs]) *
+                        np.exp(-x_y[idxs]**2 / lx2ly2[idxs])
+                    )
+                elif (n_combined_state == np.asarray([1, 0])).all():
+                    k[idxs] = (
                         (
-                            -lx[idxs]**8 * lx1[idxs] * ly1[idxs] +
-                            4 * lx[idxs]**7 * (2 * ly[idxs] - x_y[idxs] * ly1[idxs]) -
-                            4 * lx[idxs]**5 * ly[idxs] * (
-                                4 * x_y[idxs]**2 -
-                                6 * ly[idxs]**2 -
-                                3 * x_y[idxs] * ly[idxs] * ly1[idxs]
-                            ) + ly[idxs]**6 * lx1[idxs] * (
-                                4 * x_y[idxs] * ly[idxs] +
-                                4 * x_y[idxs]**2 * ly1[idxs] -
-                                ly[idxs]**2 * ly1[idxs]
-                            ) + 4 * lx[idxs]**6 * lx1[idxs] * (
-                                -5 * x_y[idxs] * ly[idxs] +
-                                x_y[idxs]**2 * ly1[idxs] +
-                                2 * ly[idxs]**2 * ly1[idxs]
-                            ) - 4 * lx[idxs] * ly[idxs]**4 * (
-                                4 * x_y[idxs]**2 * ly[idxs] -
-                                2 * ly[idxs]**3 +
-                                4 * x_y[idxs]**3 * ly1[idxs] -
-                                5 * x_y[idxs] * ly[idxs]**2 * ly1[idxs]
-                            ) - 4 * lx[idxs]**3 * ly[idxs]**2 * (
-                                8 * x_y[idxs]**2 * ly[idxs] -
-                                6 * ly[idxs]**3 +
-                                4 * x_y[idxs]**3 * ly1[idxs] -
-                                9 * x_y[idxs] * ly[idxs]**2 * ly1[idxs]
-                            ) + 2 * lx[idxs]**4 * ly[idxs] * lx1[idxs] * (
-                                8 * x_y[idxs]**3 -
-                                18 * x_y[idxs] * ly[idxs]**2 -
-                                18 * x_y[idxs]**2 * ly[idxs] * ly1[idxs] +
-                                9 * ly[idxs]**3 * ly1[idxs]
-                            ) + 4 * lx[idxs]**2 * ly[idxs]**2 * lx1[idxs] * (
-                                4 * x_y[idxs]**3 * ly[idxs] -
-                                3 * x_y[idxs] * ly[idxs]**3 +
-                                4 * x_y[idxs]**4 * ly1[idxs] -
-                                9 * x_y[idxs]**2 * ly[idxs]**2 * ly1[idxs] +
-                                2 * ly[idxs]**4 * ly1[idxs]
+                            np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                            ly[idxs] * (
+                                -4 * x_y[idxs] * lx[idxs]**3 -
+                                4 * x_y[idxs] * lx[idxs] * ly[idxs]**2 +
+                                4 * x_y[idxs]**2 * lx[idxs]**2 * lx1[idxs] -
+                                lx[idxs]**4 * lx1[idxs] +
+                                ly[idxs]**4 * lx1[idxs]
                             )
-                        )
-                    ) / (2 * np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**4.5)
-                )
-            else:
-                raise NotImplementedError(
-                    "Derivatives greater than [1, 1] are not supported!"
-                )
-        k = self.params[0]**2 * k
+                        ) / (np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
+                    )
+                elif (n_combined_state == np.asarray([0, 1])).all():
+                    k[idxs] = (
+                        (
+                            np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                            lx[idxs] * (
+                                4 * x_y[idxs] * ly[idxs]**3 +
+                                4 * x_y[idxs] * ly[idxs] * lx[idxs]**2 +
+                                4 * x_y[idxs]**2 * ly[idxs]**2 * ly1[idxs] -
+                                ly[idxs]**4 * ly1[idxs] +
+                                lx[idxs]**4 * ly1[idxs]
+                            )
+                        ) / (np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
+                    )
+                elif (n_combined_state == np.asarray([1, 1])).all():
+                    k[idxs] = (
+                        (
+                            np.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                            (
+                                -lx[idxs]**8 * lx1[idxs] * ly1[idxs] +
+                                4 * lx[idxs]**7 * (2 * ly[idxs] - x_y[idxs] * ly1[idxs]) -
+                                4 * lx[idxs]**5 * ly[idxs] * (
+                                    4 * x_y[idxs]**2 -
+                                    6 * ly[idxs]**2 -
+                                    3 * x_y[idxs] * ly[idxs] * ly1[idxs]
+                                ) + ly[idxs]**6 * lx1[idxs] * (
+                                    4 * x_y[idxs] * ly[idxs] +
+                                    4 * x_y[idxs]**2 * ly1[idxs] -
+                                    ly[idxs]**2 * ly1[idxs]
+                                ) + 4 * lx[idxs]**6 * lx1[idxs] * (
+                                    -5 * x_y[idxs] * ly[idxs] +
+                                    x_y[idxs]**2 * ly1[idxs] +
+                                    2 * ly[idxs]**2 * ly1[idxs]
+                                ) - 4 * lx[idxs] * ly[idxs]**4 * (
+                                    4 * x_y[idxs]**2 * ly[idxs] -
+                                    2 * ly[idxs]**3 +
+                                    4 * x_y[idxs]**3 * ly1[idxs] -
+                                    5 * x_y[idxs] * ly[idxs]**2 * ly1[idxs]
+                                ) - 4 * lx[idxs]**3 * ly[idxs]**2 * (
+                                    8 * x_y[idxs]**2 * ly[idxs] -
+                                    6 * ly[idxs]**3 +
+                                    4 * x_y[idxs]**3 * ly1[idxs] -
+                                    9 * x_y[idxs] * ly[idxs]**2 * ly1[idxs]
+                                ) + 2 * lx[idxs]**4 * ly[idxs] * lx1[idxs] * (
+                                    8 * x_y[idxs]**3 -
+                                    18 * x_y[idxs] * ly[idxs]**2 -
+                                    18 * x_y[idxs]**2 * ly[idxs] * ly1[idxs] +
+                                    9 * ly[idxs]**3 * ly1[idxs]
+                                ) + 4 * lx[idxs]**2 * ly[idxs]**2 * lx1[idxs] * (
+                                    4 * x_y[idxs]**3 * ly[idxs] -
+                                    3 * x_y[idxs] * ly[idxs]**3 +
+                                    4 * x_y[idxs]**4 * ly1[idxs] -
+                                    9 * x_y[idxs]**2 * ly[idxs]**2 * ly1[idxs] +
+                                    2 * ly[idxs]**4 * ly1[idxs]
+                                )
+                            )
+                        ) / (2 * np.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**4.5)
+                    )
+                else:
+                    raise NotImplementedError(
+                        "Derivatives greater than [1, 1] are not supported!"
+                    )
+            k = self.params[0]**2 * k
 
         return k
 
