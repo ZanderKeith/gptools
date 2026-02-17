@@ -1858,7 +1858,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
                 osm, osr = scipy.stats.probplot(vals[idx, ~nan_idxs], dist='norm', plot=None, fit=False)
                 a_QQ.plot(osm, osr, 'bo', markersize=10)
                 a_QQ.set_title('QQ plot')
-                a_QQ.set_xlabel('quantiles of $\mathcal{N}(0,1)$')
+                a_QQ.set_xlabel(r'quantiles of $\mathcal{N}(0,1)$')
                 a_QQ.set_ylabel('quantiles of data')
                 
                 a_hist.hist(vals[idx, ~nan_idxs], bins=bins, density=True)
